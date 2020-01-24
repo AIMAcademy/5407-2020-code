@@ -1,8 +1,8 @@
 package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
 public class RobotMap{
     //drive train
@@ -20,17 +20,25 @@ public class RobotMap{
 
     public SpeedControllerGroup left_drive, right_drive;
 
-    public DifferentialDrive drive_train;
+    //shooter
+    public WPI_TalonSRX shooting_direction;
+    final int shooting_direction_ID = 13;
+
+    //public DifferentialDrive drive_train;
 
     public RobotMap(){
+        //drive train
         talon0 = new WPI_TalonFX(drive0_ID);
         talon1 = new WPI_TalonFX(drive1_ID);
         talon2 = new WPI_TalonFX(drive2_ID);
         talon3 = new WPI_TalonFX(drive3_ID);
 
-        left_drive = new SpeedControllerGroup(talon0, talon1);
-        right_drive = new SpeedControllerGroup(talon2, talon3);
+        right_drive = new SpeedControllerGroup(talon0, talon1);
+        left_drive = new SpeedControllerGroup(talon2, talon3);
 
-        drive_train = new DifferentialDrive(left_drive, right_drive);
+        //drive_train = new DifferentialDrive(left_drive, right_drive);
+
+        //shooter
+        shooting_direction = new WPI_TalonSRX(shooting_direction_ID);
     }
 }

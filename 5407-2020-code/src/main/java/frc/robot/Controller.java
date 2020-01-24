@@ -18,7 +18,7 @@ public class Controller{
     private boolean opperator_trigger;
 
     public Controller(){
-        driver = new XboxController(0);
+        driver = new XboxController(1);
         opperator = new Joystick(3);
     }
 
@@ -46,10 +46,10 @@ public class Controller{
         opperator_trigger = opperator.getRawButton(1);
     }
     //driver
+    public double getldriver_left_x(){return driver_left_x;}
     public double getdriver_left_y(){return driver_left_y;}
-    public double getldriver_left_x(){return driver_right_y;}
-    public double getdriver_right_y(){return driver_left_y;}
-    public double getdriver_right_x(){return driver_right_y;}
+    public double getdriver_right_x(){return driver_right_x;}
+    public double getdriver_right_y(){return driver_right_y;}
     public boolean getdriver_LB(){return driver_LB;}
     //opperator
     public double getopperator_joystick_x(){return opperator_x;}

@@ -47,18 +47,22 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     controller.ReadVaues();
 
-    left_drive = controller.getdriver_left_y();
+    //drive train
     right_drive = controller.getdriver_left_y();
+    left_drive = -controller.getdriver_left_y();
 
-    left_drive += controller.getdriver_right_x();
     right_drive += controller.getdriver_right_x();
+    left_drive += controller.getdriver_right_x();
 
     robotmap.left_drive.set(left_drive);
     robotmap.right_drive.set(right_drive);
 
     //transmission
-    if(controller.getopperator_trigger() == true){air.set_transmission(true);}
+    if(controller.getdriver_LB() == true){air.set_transmission(true);}
     else{air.set_transmission(false);}
+
+    //shooter
+    robotmap.shooting_direction.set(controller.getopperator_joystick_y());
   }
 
   @Override
