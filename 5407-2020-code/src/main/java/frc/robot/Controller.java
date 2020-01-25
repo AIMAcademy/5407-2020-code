@@ -15,6 +15,7 @@ public class Controller{
     public Joystick opperator;
     private double opperator_y;
     private double opperator_x;
+    private double opperator_throttle;
     private boolean opperator_trigger;
 
     public Controller(){
@@ -42,6 +43,9 @@ public class Controller{
         if(opperator_x <= .02 && opperator_x >= -.02){opperator_x = 0;}
         opperator_y = opperator.getRawAxis(1);
         if(opperator_y <= .02 && opperator_y >= -.02){opperator_y = 0;}
+        opperator_throttle = opperator.getRawAxis(2);
+        opperator_throttle = (opperator_throttle + 1)/2;
+        //opperator_throttle /= 2;
         //buttons
         opperator_trigger = opperator.getRawButton(1);
     }
@@ -54,5 +58,6 @@ public class Controller{
     //opperator
     public double getopperator_joystick_x(){return opperator_x;}
     public double getopperator_joystick_y(){return opperator_y;}
+    public double getopperator_throttle(){return opperator_throttle;}
     public boolean getopperator_trigger(){return opperator_trigger;}
 }

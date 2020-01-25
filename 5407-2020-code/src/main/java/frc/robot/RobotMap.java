@@ -24,6 +24,9 @@ public class RobotMap{
     public WPI_TalonSRX shooting_direction;
     final int shooting_direction_ID = 13;
 
+    public WPI_TalonFX shooting_wheel;
+    final int shooting_wheel_ID = 4;
+
     //public DifferentialDrive drive_train;
 
     public RobotMap(){
@@ -40,5 +43,6 @@ public class RobotMap{
 
         //shooter
         shooting_direction = new WPI_TalonSRX(shooting_direction_ID);
+        shooting_wheel = new WPI_TalonFX(shooting_wheel_ID);
     }
 }

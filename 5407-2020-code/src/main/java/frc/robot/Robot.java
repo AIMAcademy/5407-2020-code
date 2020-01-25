@@ -58,11 +58,13 @@ public class Robot extends TimedRobot {
     robotmap.right_drive.set(right_drive);
 
     //transmission
-    if(controller.getdriver_LB() == true){air.set_transmission(true);}
-    else{air.set_transmission(false);}
+    air.set_transmission(controller.getdriver_LB());
+    // if(controller.getdriver_LB() == true){air.set_transmission(true);}
+    // else{air.set_transmission(false);}
 
     //shooter
-    robotmap.shooting_direction.set(controller.getopperator_joystick_y());
+    robotmap.shooting_direction.set(controller.getopperator_joystick_x());
+    robotmap.shooting_wheel.set(controller.getopperator_throttle());
   }
 
   @Override
