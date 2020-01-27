@@ -45,7 +45,6 @@ public class Controller{
         if(opperator_y <= .02 && opperator_y >= -.02){opperator_y = 0;}
         opperator_throttle = opperator.getRawAxis(2);
         opperator_throttle = (opperator_throttle + 1)/2;
-        //opperator_throttle /= 2;
         //buttons
         opperator_trigger = opperator.getRawButton(1);
     }

@@ -2,6 +2,8 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+
+import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 
 public class RobotMap{
@@ -27,6 +29,9 @@ public class RobotMap{
     public WPI_TalonFX shooting_wheel;
     final int shooting_wheel_ID = 4;
 
+    public Servo hood;
+    final int hood_ID = 5;
+
     //public DifferentialDrive drive_train;
 
     public RobotMap(){
@@ -44,5 +49,6 @@ public class RobotMap{
         //shooter
         shooting_direction = new WPI_TalonSRX(shooting_direction_ID);
         shooting_wheel = new WPI_TalonFX(shooting_wheel_ID);
+        hood = new Servo(hood_ID);
     }
 }
