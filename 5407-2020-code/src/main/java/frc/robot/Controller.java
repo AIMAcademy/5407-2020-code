@@ -43,6 +43,7 @@ public class Controller{
         if(opperator_x <= .02 && opperator_x >= -.02){opperator_x = 0;}
         opperator_y = opperator.getRawAxis(1);
         if(opperator_y <= .02 && opperator_y >= -.02){opperator_y = 0;}
+        opperator_y = (opperator_y + 1)/2;
         opperator_throttle = opperator.getRawAxis(2);
         opperator_throttle = (opperator_throttle + 1)/2;
         //buttons

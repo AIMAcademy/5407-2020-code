@@ -8,43 +8,39 @@ import edu.wpi.first.wpilibj.SpeedControllerGroup;
 
 public class RobotMap{
     //drive train
-    public WPI_TalonFX talon0;
-    final int drive0_ID = 0;
+    public WPI_TalonFX drive_right_up;
+    final int drive_right_up_ID = 1;
 
-    public WPI_TalonFX talon1;
-    final int drive1_ID = 1;
+    public WPI_TalonFX drive_right_down;
+    final int drive_right_down_ID = 2;
 
-    public WPI_TalonFX talon2;
-    final int drive2_ID = 2;
+    public WPI_TalonFX drive_left_up;
+    final int drive_left_up_ID = 3;
 
-    public WPI_TalonFX talon3;
-    final int drive3_ID = 3;
+    public WPI_TalonFX drive_left_down;
+    final int drive_left_down_ID = 4;
 
     public SpeedControllerGroup left_drive, right_drive;
 
     //shooter
     public WPI_TalonSRX shooting_direction;
-    final int shooting_direction_ID = 13;
+    final int shooting_direction_ID = 6;
 
     public WPI_TalonFX shooting_wheel;
-    final int shooting_wheel_ID = 4;
+    final int shooting_wheel_ID = 5;
 
     public Servo hood;
-    final int hood_ID = 5;
-
-    //public DifferentialDrive drive_train;
+    final int hood_ID = 0;
 
     public RobotMap(){
         //drive train
-        talon0 = new WPI_TalonFX(drive0_ID);
-        talon1 = new WPI_TalonFX(drive1_ID);
-        talon2 = new WPI_TalonFX(drive2_ID);
-        talon3 = new WPI_TalonFX(drive3_ID);
+        drive_right_up = new WPI_TalonFX(drive_right_up_ID);
+        drive_right_down = new WPI_TalonFX(drive_right_down_ID);
+        drive_left_up = new WPI_TalonFX(drive_left_up_ID);
+        drive_left_down = new WPI_TalonFX(drive_left_down_ID);
 
-        right_drive = new SpeedControllerGroup(talon0, talon1);
-        left_drive = new SpeedControllerGroup(talon2, talon3);
-
-        //drive_train = new DifferentialDrive(left_drive, right_drive);
+        right_drive = new SpeedControllerGroup(drive_right_up, drive_right_down);
+        left_drive = new SpeedControllerGroup(drive_left_up, drive_left_down);
 
         //shooter
         shooting_direction = new WPI_TalonSRX(shooting_direction_ID);

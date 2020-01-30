@@ -4,8 +4,8 @@ import edu.wpi.first.wpilibj.Solenoid;
 
 public class Air {
 
-    private Solenoid transmission;
     private final int transmission_ID = 0;
+    private Solenoid transmission;
 
     public Air(){
         transmission = new Solenoid(transmission_ID);
