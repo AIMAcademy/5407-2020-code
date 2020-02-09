@@ -1,50 +1,46 @@
+/**
+ * Simple class containing constants used throughout project
+ */
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
-import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+class RobotMap {
 
-import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.SpeedControllerGroup;
+    // USB Ports
+    public final static int kUSBPort_DriverControl = 0; 
+    public final static int kUSBPort_OperatorControl = 1;
 
-public class RobotMap{
-    //drive train
-    public WPI_TalonFX drive_right_up;
-    final int drive_right_up_ID = 1;
+    // CAN Bus IDs
+    public final static int kCANId_RightDriveMotorA = 1;
+    public final static int kCANId_RightDriveMotorB = 2;
+    public final static int kCANId_LeftDriveMotorA = 3;
+    public final static int kCANId_LeftDriveMotorB = 4;
 
-    public WPI_TalonFX drive_right_down;
-    final int drive_right_down_ID = 2;
+    public final static int kCANId_ShooterMotor = 5;
+    public final static int kCANId_ShooterTurretMotor = 6;
 
-    public WPI_TalonFX drive_left_up;
-    final int drive_left_up_ID = 3;
+    public final static int kCANId_PCM = 10;
 
-    public WPI_TalonFX drive_left_down;
-    final int drive_left_down_ID = 4;
+    // Pneumatic Control Module Ids
+    public final static int kPCMPort_DriveShifter = 0;
+    public final static int kPCMPort_BallPusherUpper = 4;
 
-    public SpeedControllerGroup left_drive, right_drive;
+   // Digital Inputs/Outputs
+   //public final static int kDigitalIOPort_ = 0;
 
-    //shooter
-    public WPI_TalonSRX shooting_direction;
-    final int shooting_direction_ID = 6;
+   // Analog Inputs
 
-    public WPI_TalonFX shooting_wheel;
-    final int shooting_wheel_ID = 5;
+   //public final static int kAnalogPort_ = 0;
+   public final static int kAnalogPort_ShooterHeight = 0;
+   public final static int kAnalogPort_TurretPos = 1;
 
-    public Servo hood;
-    final int hood_ID = 0;
+   // PWM Ports
+   public final static int kPWMPort_ShooterHeight = 5;
 
-    public RobotMap(){
-        //drive train
-        drive_right_up = new WPI_TalonFX(drive_right_up_ID);
-        drive_right_down = new WPI_TalonFX(drive_right_down_ID);
-        drive_left_up = new WPI_TalonFX(drive_left_up_ID);
-        drive_left_down = new WPI_TalonFX(drive_left_down_ID);
+   // Input Bottons
+   public final static int kButton_ShooterHeightRaise = 4;
+   public final static int kButton_ShooterHeightLower = 6;
 
-        right_drive = new SpeedControllerGroup(drive_right_up, drive_right_down);
-        left_drive = new SpeedControllerGroup(drive_left_up, drive_left_down);
+   public final static int kButton_ShooterVelocity_Raise = 8;
+   public final static int kButton_ShooterVelocity_Lower = 9;
 
-        //shooter
-        shooting_direction = new WPI_TalonSRX(shooting_direction_ID);
-        shooting_wheel = new WPI_TalonFX(shooting_wheel_ID);
-        hood = new Servo(hood_ID);
-    }
 }

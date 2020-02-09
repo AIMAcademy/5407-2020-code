@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) 2018 FIRST. All Rights Reserved.                             */
+/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                        */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
 /* must be accompanied by the FIRST BSD license file in the root directory of */
 /* the project.                                                               */
@@ -8,6 +8,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -18,58 +19,145 @@ import edu.wpi.first.wpilibj.TimedRobot;
  */
 public class Robot extends TimedRobot {
 
-  RobotMap robotmap = new RobotMap();
-  Controller controller = new Controller();
-  Air air = new Air();
-
-  double left_drive;
-  double right_drive;
+  Inputs inputs = null;
+  Shooter shooter = null;  
+	//RobotBase robotbase = null;
+	LCTelemetry telem = null;
+	Config config = null;
 
   /**
-   * This function is run when the robot is first started up and should be used
-   * for any initialization code.
+   * This function is run when the robot is first started up and should be
+   * used for any initialization code.
    */
   @Override
   public void robotInit() {
-    air.airint();
+
+    config    = new Config("/home/lvuser/WPConfig_2020.cfg");  //init and open the config file
+     	
+    telem     = new LCTelemetry();	
+    inputs    = new Inputs();			
+    shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
+    //robotbase = new RobotBase();
+   
+    // add the telemetry fields for all parts
+    //inputs.addTelemetryHeaders( telem );
+    shooter.addTelemetryHeaders( telem );
+    //robotbase.addTelemetryHeaders( telem );
+
+  }
+
+  /**
+   * This function is called every robot packet, no matter the mode. Use
+   * this for items like diagnostics that you want ran during disabled,
+   * autonomous, teleoperated and test.
+   *
+   * <p>This runs after the mode specific periodic functions, but before
+   * LiveWindow and SmartDashboard integrated updating.
+   */
+   @Override
+  public void robotPeriodic() {
   }
 
   @Override
-  public void autonomousInit() {}
+    public void disabledPeriodic() {
 
+      telem.saveSpreadSheet();            // this an be called repeatly. One spreadheet is written, it is cleared. 
+
+    }
+
+
+
+  /**
+   * This autonomous (along with the chooser code above) shows how to select
+   * between different autonomous modes using the dashboard. The sendable
+   * chooser code works with the Java SmartDashboard. If you prefer the
+   * LabVIEW Dashboard, remove all of the chooser code and uncomment the
+   * getString line to get the auto name from the text box below the Gyro
+   *
+   * <p>You can add additional auto modes by adding additional comparisons to
+   * the switch structure below with additional strings. If using the
+   * SendableChooser make sure to add them to the chooser code above as well.
+   */
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousInit() {
+    //m_autoSelected = m_chooser.getSelected();
+    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
+    //System.out.println("Auto selected: " + m_autoSelected);
+  }
 
+  /**
+   * This function is called periodically during autonomous.
+   */
   @Override
-  public void teleopInit() {}
+  public void autonomousPeriodic() {
+    /***
+    switch (m_autoSelected) {
+      case kCustomAuto:
+        // Put custom auto code here
+        break;
+      case kDefaultAuto:
+      default:
+        // Put default auto code here
+        break;
+    }
+    ***/
+  }
 
+  /**
+   * This function is called at the start of operator control.
+   */
+  @Override
+  public void teleopInit(){
+    //config.load();              // durign testing reload the config file to be sure we got updates
+  }
+
+  /**
+   * This function is called periodically during operator control.
+   */
   @Override
   public void teleopPeriodic() {
-    controller.ReadVaues();
-
-    //drive train
-    right_drive = controller.getdriver_left_y();
-    left_drive = -controller.getdriver_left_y();
-
-    right_drive += controller.getdriver_right_x();
-    left_drive += controller.getdriver_right_x();
-
-    robotmap.left_drive.set(left_drive);
-    robotmap.right_drive.set(right_drive);
-
-    //transmission
-    if(controller.getdriver_LB() == true){air.set_transmission(true);}
-    else{air.set_transmission(false);}
-
-    //shooter
-    robotmap.shooting_direction.set(controller.getopperator_joystick_x());
-    robotmap.shooting_wheel.set(controller.getopperator_throttle());
-    robotmap.hood.set(controller.getopperator_joystick_y());
+    inputs.readValues();
+    shooter.update(inputs,config);
+    //robotbase.update(inputs);
+    
+    inputs.outputToDashboard(false);
+    shooter.outputToDashboard(false);
+    //robotbase.outputToDashboard(false);
+    
+    inputs.writeTelemetryValues(telem);				// order does not matter
+    shooter.writeTelemetryValues(telem);
+    //robotbase.writeTelemetryValues(telem);
+    
+    telem.writeRow();					
   }
 
-  @Override
-  public void testInit() {}
 
   @Override
-  public void testPeriodic() {}
+  public void testInit(){
+    config.load();              // durign testing reload the config file to be sure we got updates
+  }
+
+
+  /**
+   * This function is called periodically during test mode.
+   */
+  @Override
+  public void testPeriodic() {
+
+    inputs.readValues();
+    shooter.update(inputs,config);
+    //robotbase.update(inputs);
+    
+    inputs.outputToDashboard(false);
+    shooter.outputToDashboard(false);
+    //robotbase.outputToDashboard(false);
+    
+    //inputs.writeTelemetryValues(telem);				// order does not matter
+    shooter.writeTelemetryValues(telem);
+    //robotbase.writeTelemetryValues(telem);
+    
+    telem.writeRow();					
+
+
+  }
 }
