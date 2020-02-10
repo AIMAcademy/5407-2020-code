@@ -1,6 +1,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.XboxController;
 
 /**********************************************************************
  * Inputs Class -- This is used to collect all human input or what is considered input for the robot.
@@ -16,22 +17,22 @@ import edu.wpi.first.wpilibj.Joystick;
  */
 
 
-//import edu.wpi.first.wpilibj.XboxController;
-//import edu.wpi.first.wpilibj.GenericHID.Hand;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Inputs {
 
 	// declare you variable up here
-	//XboxController mOpertorControl = null;
-	//XboxController mDriverControl = null;
-	Joystick mDriverControl = null;
+	XboxController gamepadOperator = null;
+	XboxController gamepadDriver = null;
+	Joystick joyTestController = null;
 
 
 	public double dDriverPower = 0.0;
 	public double dDriverTurn = 0.0;
 	public double dShooterPower = 0.0;
 	public double dTurretPower = 0.0;
+	public double dHoodPower = 0.0;
 	public double dTestValue = 0.0;
 	public double dRequestedVelocity = 0.0;
 
@@ -46,14 +47,20 @@ public class Inputs {
 
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
-
+	private boolean bUseTestController = false;
 
 	// class Constructor initialize your variables here
     public Inputs() {
-    	
-		mDriverControl = new Joystick( RobotMap.kUSBPort_DriverControl );
-		//gamepadDriver  = new XboxController(RobotMap.kUSBPort_DriverControl );
-    	//gamepadOperator = new XboxController(RobotMap.kUSBPort_OperatorControl );
+		
+		try {
+			joyTestController = new Joystick( RobotMap.kUSBPort_TestJoyStick );
+			bUseTestController = true;
+		} 
+		catch(Exception e) {
+			bUseTestController = false;
+		}
+		gamepadDriver  = new XboxController(RobotMap.kUSBPort_DriverControl );
+    	gamepadOperator = new XboxController(RobotMap.kUSBPort_OperatorControl );
     	zeroInputs();      				// this will init many variables
     
     }
@@ -64,6 +71,7 @@ public class Inputs {
 		telem.addColumn("I Driver Turn");
 		telem.addColumn("I Shooter Power");
 		telem.addColumn("I Shooter Launch");
+		telem.addColumn("I Sh Hood Power");
 		telem.addColumn("I Turret Power");
 		telem.addColumn("I Base Shift");
 		telem.addColumn("I Update PID");
@@ -79,6 +87,7 @@ public class Inputs {
 		telem.saveDouble("I Driver Power", this.dDriverPower );
 		telem.saveDouble("I Driver Turn", this.dDriverTurn );
 		telem.saveDouble("I Shooter Power", this.dShooterPower );
+		telem.saveDouble("I Sh Hood Power", this.dHoodPower );
 		telem.saveTrueBoolean("I Shooter Launch", this.bShooterLaunch );
 		telem.saveDouble("I Turret Power", this.dTurretPower );
 		telem.saveDouble("I Req Vel", this.dRequestedVelocity );
@@ -96,33 +105,52 @@ public class Inputs {
     public void readValues() {   
 
     	// you can overload the inputs to test different ideas. 
-		//double temp  = mDriverControl.getY(Hand.kLeft) ;	    //  we cook this down as full is too fast
-		double temp  = mDriverControl.getY() ;	    			// we cook this down as full is too fast
+		//double temp  = F.getY(Hand.kLeft) ;	    //  we cook this down as full is too fast
+		double temp  = gamepadDriver.getY(Hand.kRight) ;	    			// we cook this down as full is too fast
 		dDriverPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turn power 
 
-		temp  = mDriverControl.getX() ;	    					// we cook this down as full is too fast
+		temp  = gamepadDriver.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 		
-		temp  = mDriverControl.getZ() ;	    					// we cook this down as full is too fast
+		temp  = gamepadOperator.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
 		dTurretPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turret turn power 
 
-		dShooterPower = convertJoystickAxisToValueRange( mDriverControl.getTwist(), 1.0 ) ; // force to + value only
-		dRequestedVelocity = convertJoystickAxisToValueRange(  mDriverControl.getTwist(), 15000.0 ) ;    // force to + value only
+		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
+		//dRequestedVelocity = convertJoystickAxisToValueRange(  gamepadDriver.getTwist(), 15000.0 ) ;    // force to + value only
+		
+		dShooterPower = 0.0;
+		if (bUseTestController == true)										//Use test controller
+			dShooterPower = joyTestController.getTwist();
+		else 
+			dShooterPower = gamepadOperator.getY(Hand.kLeft);
+
 
 		// Please put all buttons in ID order from the drive controller are placed here
-		bUpdateShooterPID = mDriverControl.getRawButtonPressed(11);  // only when it is pressed 
+		bUpdateShooterPID = gamepadOperator.getAButtonPressed();  // only when it is pressed 
 
-		bShiftBaseToHigh= mDriverControl.getTop();
+		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
-		bShooterHeightLower = mDriverControl.getRawButton(RobotMap.kButton_ShooterHeightLower);
-		bShooterHeightRaise = mDriverControl.getRawButton(RobotMap.kButton_ShooterHeightRaise);
+		dHoodPower = gamepadOperator.getY(Hand.kRight);
+		if (dHoodPower < Math.abs(.5)) 								// dead zone
+			dHoodPower = 0.0; 										// kill to ensure no accidents
 
-		bShooterVelocity_Lower = mDriverControl.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
-		bShooterVelocity_Raise = mDriverControl.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
+		if (bUseTestController == true) {
+			bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
+			bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
+		}
+		else {
+			bShooterVelocity_Lower = false;
+			bShooterVelocity_Raise = false;	
+		}
 
-		bShooterLaunch = mDriverControl.getTrigger();
-		
-    }
+		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7)		// Prevent accidental presses
+			bShooterLaunch = true;
+		else
+			bShooterLaunch = false;		
+	
+	
+	
+		}
 
     
 	public int convertJoystickAxisToValueRange( double d_InputValue, int i_MaxValue )  {

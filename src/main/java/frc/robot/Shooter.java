@@ -161,7 +161,7 @@ public class Shooter {
 			dVelocityAdjust += 1.0;
 		}
 
-		if(inputs.mDriverControl.getRawButtonPressed(3) == true){
+		if(inputs.bUpdateShooterPID == true){
 			adjustPIDError();
 			this.updateShooterSettings();
 		}

@@ -8,6 +8,7 @@ class RobotMap {
     // USB Ports
     public final static int kUSBPort_DriverControl = 0; 
     public final static int kUSBPort_OperatorControl = 1;
+    public final static int kUSBPort_TestJoyStick = 2;
 
     // CAN Bus IDs
     public final static int kCANId_RightDriveMotorA = 1;
