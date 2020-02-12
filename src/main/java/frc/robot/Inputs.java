@@ -35,9 +35,11 @@ public class Inputs {
 	public double dHoodPower = 0.0;
 	public double dTestValue = 0.0;
 	public double dRequestedVelocity = 0.0;
-
 	
 	public boolean bShooterLaunch = false;
+
+	public boolean bIntakeIn = false;
+	public boolean bIntakeOut = false;
 
 	public boolean bUpdateShooterPID = false;
 	public boolean bShiftBaseToHigh = false;
@@ -73,6 +75,8 @@ public class Inputs {
 		telem.addColumn("I Shooter Launch");
 		telem.addColumn("I Sh Hood Power");
 		telem.addColumn("I Turret Power");
+		telem.addColumn("I Intake In");
+		telem.addColumn("I Intake Out");
 		telem.addColumn("I Base Shift");
 		telem.addColumn("I Update PID");
 		telem.addColumn("I Req Vel");
@@ -90,6 +94,8 @@ public class Inputs {
 		telem.saveDouble("I Sh Hood Power", this.dHoodPower );
 		telem.saveTrueBoolean("I Shooter Launch", this.bShooterLaunch );
 		telem.saveDouble("I Turret Power", this.dTurretPower );
+		telem.saveTrueBoolean("I Intake In", this.bIntakeIn);
+		telem.saveTrueBoolean("I Intake Out", this.bIntakeOut);
 		telem.saveDouble("I Req Vel", this.dRequestedVelocity );
 		telem.saveTrueBoolean("I Base Shift", this.bShiftBaseToHigh );
 		telem.saveTrueBoolean("I Update PID", this.bUpdateShooterPID);
@@ -116,8 +122,19 @@ public class Inputs {
 		dTurretPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turret turn power 
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
+		
 		//dRequestedVelocity = convertJoystickAxisToValueRange(  gamepadDriver.getTwist(), 15000.0 ) ;    // force to + value only
 		
+												//Prevent accident Hits
+		if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 || gamepadOperator.getBumper(Hand.kLeft) == true){
+			bIntakeIn = true;									// If driver gamepad left trigger pressed completely or Operator gamepad left bumper held
+		}
+												//Prevent accident Hits
+		if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 || gamepadOperator.getBumper(Hand.kRight) == true) {
+			bIntakeOut = true;									// If driver gamepad right trigger pressed completely or Operator gamepad right bumper held
+		}
+		
+
 		dShooterPower = 0.0;
 		if (bUseTestController == true)										//Use test controller
 			dShooterPower = joyTestController.getTwist();

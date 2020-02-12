@@ -35,6 +35,8 @@ class RobotMap {
    public final static int kAnalogPort_TurretPos = 1;
 
    // PWM Ports
+
+   public final static int kPWMPort_IntakeMoter = 0;
    public final static int kPWMPort_ShooterHeight = 5;
 
    // Input Bottons

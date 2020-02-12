@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Solenoid;
+import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 //import com.ctre.phoenix.motorcontrol.can.TalonSRX;
@@ -18,6 +19,7 @@ public class RobotBase {
 	TalonFX motLeftDriveMotorB  = null;
 	TalonFX motRightDriveMotorA = null;
 	TalonFX motRightDriveMotorB = null;
+	Spark motIntake = null;
 
 	//Compressor motCompressor = null;
 	Solenoid solShifter = null;
@@ -39,7 +41,7 @@ public class RobotBase {
 		//motCompressor.enabled();
 		solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
 
-
+		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
 		// Make sure motors are stopped
 		
 		
@@ -48,6 +50,7 @@ public class RobotBase {
 		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
+		motIntake.set(0.0);
   	
     }
 
@@ -76,6 +79,14 @@ public class RobotBase {
 		solShifter.set(inputs.bShiftBaseToHigh);
 
 
+																				// Powering Intake Motors
+		if (inputs.bIntakeIn == true) {											// Forward
+			motIntake.set(.5);
+		}
+		else if (inputs.bIntakeOut == true) { 									// Backwards
+			motIntake.set(-.5);			
+		}
+
     }
 
     public void addTelemetryHeaders(LCTelemetry telem ){
@@ -83,6 +94,7 @@ public class RobotBase {
 		telem.addColumn("RB Left Drive Motor B"); 
 		telem.addColumn("RB Rite Drive Motor A"); 
 		telem.addColumn("RB Rite Drive Motor B");
+		telem.addColumn("Intake Motor");
     }
 
     public void writeTelemetryValues(LCTelemetry telem ){
@@ -90,6 +102,7 @@ public class RobotBase {
 		telem.saveDouble("RB Left Drive Motor B", this.motLeftDriveMotorB.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor A", this.motRightDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor B", this.motRightDriveMotorB.getMotorOutputPercent());
+		telem.saveDouble("Intake Motor", this.motIntake.getSpeed());
     }
 
 
