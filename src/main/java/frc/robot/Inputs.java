@@ -128,25 +128,24 @@ public class Inputs {
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
 		//dRequestedVelocity = convertJoystickAxisToValueRange(  gamepadDriver.getTwist(), 15000.0 ) ;    // force to + value only
-		
-												
-		bIntakeIn = false;
-		bIntakeOut = false;
+	
 									
-		// give priority to the operator in these operations
 		if( gamepadOperator.getBumper(Hand.kLeft) == true){
 			bIntakeIn = true;
 		} else if( gamepadOperator.getBumper(Hand.kRight) == true){
 			bIntakeOut = true;
-		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  //Prevent accident Hits
+		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  	//Prevent accident Hits
 			bIntakeIn = true;			
-		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
+		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ 	//Prevent accident Hits
 			bIntakeOut = true;									
+		} else {														// If nothing pressed, it won't go
+			bIntakeIn = false;
+			bIntakeOut = false;
 		}
 
 		bTeainatorToggle = false;
 
-		if((gamepadOperator.getYButton() == true || gamepadDriver.getYButton() == true)) {
+		if((gamepadOperator.getYButtonPressed()) == true || gamepadDriver.getYButtonPressed() == true) {
 			if(bTeainatorLastToggle == false){
 				bTeainatorToggle = true;
 			}
