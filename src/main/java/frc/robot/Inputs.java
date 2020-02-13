@@ -64,6 +64,7 @@ public class Inputs {
 		catch(Exception e) {
 			bUseTestController = false;
 		}
+		bUseTestController = false;
 		gamepadDriver  = new XboxController(RobotMap.kUSBPort_DriverControl );
     	gamepadOperator = new XboxController(RobotMap.kUSBPort_OperatorControl );
     	zeroInputs();      				// this will init many variables
@@ -146,7 +147,7 @@ public class Inputs {
 		bTeainatorToggle = false;
 
 		if((gamepadOperator.getYButton() == true || gamepadDriver.getYButton() == true)) {
-			if(bTeainatorLastToggle = false){
+			if(bTeainatorLastToggle == false){
 				bTeainatorToggle = true;
 			}
 			else {
@@ -156,11 +157,6 @@ public class Inputs {
 
 		bTeainatorLastToggle = bTeainatorToggle;
 
-
-
-
-		
-		
 
 		dShooterPower = 0.0;
 		if (bUseTestController == true)										//Use test controller
@@ -249,6 +245,7 @@ public class Inputs {
 		SmartDashboard.putNumber("I_ShooterPower",this.dShooterPower);
 		SmartDashboard.putBoolean("I_UpdateShooterPID",bUpdateShooterPID);
 		SmartDashboard.putNumber("I_TestValue",dTestValue);
+		SmartDashboard.putBoolean("I_TestController",bUseTestController);
 		
 		if ( b_MinDisplay == false ){
 		}
