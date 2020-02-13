@@ -41,6 +41,9 @@ public class Inputs {
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
 
+	public boolean bTeainatorToggle = false;
+	public boolean bTeainatorLastToggle = false;	 
+
 	public boolean bUpdateShooterPID = false;
 	public boolean bShiftBaseToHigh = false;
 
@@ -125,14 +128,38 @@ public class Inputs {
 		
 		//dRequestedVelocity = convertJoystickAxisToValueRange(  gamepadDriver.getTwist(), 15000.0 ) ;    // force to + value only
 		
-												//Prevent accident Hits
-		if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 || gamepadOperator.getBumper(Hand.kLeft) == true){
-			bIntakeIn = true;									// If driver gamepad left trigger pressed completely or Operator gamepad left bumper held
+												
+		bIntakeIn = false;
+		bIntakeOut = false;
+									
+		// give priority to the operator in these operations
+		if( gamepadOperator.getBumper(Hand.kLeft) == true){
+			bIntakeIn = true;
+		} else if( gamepadOperator.getBumper(Hand.kRight) == true){
+			bIntakeOut = true;
+		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  //Prevent accident Hits
+			bIntakeIn = true;			
+		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
+			bIntakeOut = true;									
 		}
-												//Prevent accident Hits
-		if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 || gamepadOperator.getBumper(Hand.kRight) == true) {
-			bIntakeOut = true;									// If driver gamepad right trigger pressed completely or Operator gamepad right bumper held
+
+		bTeainatorToggle = false;
+
+		if((gamepadOperator.getYButton() == true || gamepadDriver.getYButton() == true)) {
+			if(bTeainatorLastToggle = false){
+				bTeainatorToggle = true;
+			}
+			else {
+				bTeainatorToggle = false;
+			}
 		}
+
+		bTeainatorLastToggle = bTeainatorToggle;
+
+
+
+
+		
 		
 
 		dShooterPower = 0.0;

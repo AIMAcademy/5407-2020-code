@@ -1,6 +1,5 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -23,6 +22,7 @@ public class RobotBase {
 
 	//Compressor motCompressor = null;
 	Solenoid solShifter = null;
+	Solenoid solTeainator = null;
 	
 
     /**
@@ -40,12 +40,12 @@ public class RobotBase {
 		//motCompressor = new Compressor( RobotMap.kCANId_PCM );
 		//motCompressor.enabled();
 		solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
+		solTeainator = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_Teainator);
+
 
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
+
 		// Make sure motors are stopped
-		
-		
-    	// Make sure motors are stopped
 		motLeftDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
@@ -78,13 +78,22 @@ public class RobotBase {
 
 		solShifter.set(inputs.bShiftBaseToHigh);
 
-
-																				// Powering Intake Motors
+		// Powering Intake Motors
 		if (inputs.bIntakeIn == true) {											// Forward
 			motIntake.set(.5);
 		}
 		else if (inputs.bIntakeOut == true) { 									// Backwards
 			motIntake.set(-.5);			
+		}
+
+		if (inputs.bTeainatorToggle == true)  {
+
+			if (solTeainator.get() == true)
+				solTeainator.set(false);
+			else if (solTeainator.get() == false) {
+				solTeainator.set(true);
+			}
+
 		}
 
     }
@@ -94,7 +103,7 @@ public class RobotBase {
 		telem.addColumn("RB Left Drive Motor B"); 
 		telem.addColumn("RB Rite Drive Motor A"); 
 		telem.addColumn("RB Rite Drive Motor B");
-		telem.addColumn("Intake Motor");
+		telem.addColumn("RB Intake Motor");
     }
 
     public void writeTelemetryValues(LCTelemetry telem ){
@@ -102,7 +111,7 @@ public class RobotBase {
 		telem.saveDouble("RB Left Drive Motor B", this.motLeftDriveMotorB.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor A", this.motRightDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor B", this.motRightDriveMotorB.getMotorOutputPercent());
-		telem.saveDouble("Intake Motor", this.motIntake.getSpeed());
+		telem.saveDouble("RB Intake Motor", this.motIntake.getSpeed());
     }
 
 
@@ -111,6 +120,10 @@ public class RobotBase {
     
 	// Show what variables we want to the SmartDashboard
 	public void outputToDashboard(boolean b_MinDisplay)  {
+
+		SmartDashboard.putNumber("RB Intake Speed", this.motIntake.getSpeed());
+		SmartDashboard.putBoolean("RB Tea State", this.solTeainator.get());
+
 
     	if( b_MinDisplay == false ){
 			SmartDashboard.putNumber("O_<<<Motors", dLeftDrivePower);

@@ -21,7 +21,7 @@ public class Robot extends TimedRobot {
 
   Inputs inputs = null;
   Shooter shooter = null;  
-	//RobotBase robotbase = null;
+	RobotBase robotbase = null;
 	LCTelemetry telem = null;
 	Config config = null;
 
@@ -37,12 +37,12 @@ public class Robot extends TimedRobot {
     telem     = new LCTelemetry();	
     inputs    = new Inputs();			
     shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
-    //robotbase = new RobotBase();
+    robotbase = new RobotBase();
    
     // add the telemetry fields for all parts
-    //inputs.addTelemetryHeaders( telem );
+    inputs.addTelemetryHeaders( telem );
     shooter.addTelemetryHeaders( telem );
-    //robotbase.addTelemetryHeaders( telem );
+    robotbase.addTelemetryHeaders( telem );
 
   }
 
@@ -118,15 +118,15 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     inputs.readValues();
     shooter.update(inputs,config);
-    //robotbase.update(inputs);
+    robotbase.update(inputs);
     
     inputs.outputToDashboard(false);
     shooter.outputToDashboard(false);
-    //robotbase.outputToDashboard(false);
+    robotbase.outputToDashboard(false);
     
     inputs.writeTelemetryValues(telem);				// order does not matter
     shooter.writeTelemetryValues(telem);
-    //robotbase.writeTelemetryValues(telem);
+    robotbase.writeTelemetryValues(telem);
     
     telem.writeRow();					
   }
@@ -143,21 +143,6 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void testPeriodic() {
-
-    inputs.readValues();
-    shooter.update(inputs,config);
-    //robotbase.update(inputs);
-    
-    inputs.outputToDashboard(false);
-    shooter.outputToDashboard(false);
-    //robotbase.outputToDashboard(false);
-    
-    //inputs.writeTelemetryValues(telem);				// order does not matter
-    shooter.writeTelemetryValues(telem);
-    //robotbase.writeTelemetryValues(telem);
-    
-    telem.writeRow();					
-
 
   }
 }
