@@ -4,6 +4,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.AnalogPotentiometer;
 //import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -72,7 +73,7 @@ public class Shooter {
 	TalonSRX motCANTurretMotor = null;
 	Servo    motShooterHeight = null;
 	Timer    timAdjust		  = null;
-	AnalogInput anaTurretPos  = null;
+	AnalogPotentiometer anaTurretPos  = null;
 	AnalogInput anaShooterHeight = null;
 	Solenoid    solBallPusherUpper = null;
 
@@ -90,6 +91,9 @@ public class Shooter {
 	int iShooterHeight = 0;
 	int iShooterHeight_Top =0;
 	int iShooterHeight_Bottom = 0;
+
+	double max_turret = .95;
+	double min_turret = .05;
 	
     /**
      * This function is run when this class is first created used for any initialization code.
@@ -111,7 +115,6 @@ public class Shooter {
 
 		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
 		motCANTurretMotor.setInverted(true); // invert direction to match gearing
-
 
 		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
@@ -146,7 +149,7 @@ public class Shooter {
 		// motCANTurretMotor.set(ControlMode.Velocity, 0);
 
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
-		anaTurretPos = new AnalogInput(RobotMap.kAnalogPort_TurretPos);
+		anaTurretPos = new AnalogPotentiometer(RobotMap.kAnalogPort_TurretPos);
 
 		
 		System.out.println("Shooter constructor end...");
@@ -155,7 +158,7 @@ public class Shooter {
 
 	public void update(final Inputs inputs, final Config config) {
 
-		// Control Shooter Height
+
 		if (inputs.bUpdateShooterPID == true) {
 
 			// config.load(); // force a reload of the config
@@ -181,8 +184,7 @@ public class Shooter {
 
 		this.solBallPusherUpper.set(inputs.bShooterLaunch);			// fire ball into shooter
 
-		// motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
-
+		// Control Shooter Height
 		dShooterHeightPower= kShooterHeight_Stop;
 		if (inputs.bShooterHeightRaise == true)
 			dShooterHeightPower = kShooterHeight_Up;
@@ -197,6 +199,15 @@ public class Shooter {
 	
 		motShooterHeight.set(dShooterHeightPower);
 
+		//turret posistion
+		if(anaTurretPos.get() >= max_turret && inputs.dTurretPower <= .5){
+			motCANTurretMotor.set(ControlMode.PercentOutput, 0);
+		}
+		else if(anaTurretPos.get() >= min_turret && inputs.dTurretPower >= .5){
+			motCANShooterMotor.set(ControlMode.PercentOutput, 0);
+		} else {
+			motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
+		}
 	}
 
 	public void loadConfig(final Config config) {
@@ -352,7 +363,4 @@ public class Shooter {
 		}
 		
 	}
-
-
-	
 }
