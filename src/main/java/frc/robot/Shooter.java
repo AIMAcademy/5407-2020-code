@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.AnalogInput;
 //import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
@@ -32,6 +33,12 @@ public class Shooter {
 	double dCLErrorThreshold = 10;
 	String sCLStatus = "****";
 	boolean bReadyToShoot = false;
+
+	Limelight limelight = null;
+  
+	// Limelight http camera feeds
+	private final String LimelightHostname = "limelight";
+	private HttpCamera limelightFeed;
 	
 	/**
 	 * Which PID slot to pull gains from. Starting 2018, you can choose from
@@ -88,6 +95,10 @@ public class Shooter {
      * This function is run when this class is first created used for any initialization code.
      */
     public Shooter(final Config config) {
+
+		// add limelight
+		limelight = new Limelight(LimelightHostname);
+		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
 
 		System.out.println("Shooter constructor init...");
 		timAdjust = new Timer();
