@@ -28,7 +28,7 @@ public class Shooter {
 	double dPid_FeedForward = 0.0446;  // estimate of how many ticks we will see at any velocity in 100 ms.
 	double dVelocitySensitivity = 5.0;
 	double dRequestedVelocity = 0.0;
-	double dVelocityAdjust = 0.0;
+	double dLastRequestedVelocity = 0.0;
 	double dCLAdjust = 0.0;
 	double dCLError = 0.0;
 	boolean bCLAdjustedError = false;
@@ -168,7 +168,7 @@ public class Shooter {
 
 		shootvel.loadTable();
 
-
+	}
 
 
 
