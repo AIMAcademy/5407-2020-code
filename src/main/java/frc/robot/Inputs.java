@@ -144,7 +144,7 @@ public class Inputs {
 		if(gamepadOperator.getXButton() == true) {
 			bMouthIn = true; 
 		} else if(gamepadOperator.getBButton()) {
-			bMouthOut = true; 
+			bMouthout = true; 
 		}
 		else {
 			bMouthIn = false; 
