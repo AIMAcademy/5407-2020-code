@@ -123,7 +123,7 @@ public class Inputs {
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 		
 		temp  = gamepadOperator.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
-		dTurretPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turret turn power 
+		dTurretPower = temp * Math.abs(temp * temp);     // quad it to desensatize the turret turn power 
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
