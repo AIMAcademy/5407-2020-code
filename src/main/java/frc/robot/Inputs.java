@@ -41,6 +41,9 @@ public class Inputs {
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
 
+	public boolean bMouthIn = false; 
+	public boolean bMouthOut = false;
+
 	public boolean bTeainatorToggle = false;
 	public boolean bTeainatorLastToggle = false;	 
 
@@ -72,7 +75,7 @@ public class Inputs {
     	zeroInputs();      				// this will init many variables
     
     }
-     
+    
     // this is the order they will be in the spread sheet. 
     public void addTelemetryHeaders(LCTelemetry telem ){
 		telem.addColumn("I Driver Power");
@@ -138,8 +141,17 @@ public class Inputs {
 		
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
 
-	
-												
+		if(gamepadOperator.getXButton() == true) {
+			bMouthIn = true; 
+		} else if(gamepadOperator.getBButton()) {
+			bMouthout = true; 
+		}
+		else {
+			bMouthIn = false; 
+			bMouthOut = false; 
+		}
+
+										
 		bIntakeIn = false;
 		bIntakeOut = false;
 									

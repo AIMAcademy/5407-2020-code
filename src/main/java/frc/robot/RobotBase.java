@@ -19,6 +19,7 @@ public class RobotBase {
 	TalonFX motRightDriveMotorA = null;
 	TalonFX motRightDriveMotorB = null;
 	Spark motIntake = null;
+	Spark motMouth = null; 
 
 	//Compressor motCompressor = null;
 	Solenoid solShifter = null;
@@ -45,13 +46,15 @@ public class RobotBase {
 
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
 
+		motMouth = new Spark(RobotMap.kPWMPort_Mouth); 
+
 		// Make sure motors are stopped
 		motLeftDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motIntake.set(0.0);
-  	
+		motMouth.set(0.0);
     }
 
     /**
@@ -90,6 +93,17 @@ public class RobotBase {
 		}
 
 
+		if(inputs.bMouthIn == true) {
+			motMouth.set(1); 
+		}
+		else if(inputs.bMouthOut == true)
+		{
+			motMouth.set(-1); 
+		}
+		else 
+		{
+			motMouth.set(0); 
+		}
 		//Setting Intake Soloniod to true/false
 		solTeainator.set(inputs.bTeainatorToggle);
 
