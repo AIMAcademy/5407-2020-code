@@ -140,7 +140,6 @@ public class Shooter {
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
 		anaTurretPos = new AnalogPotentiometer(RobotMap.kAnalogPort_TurretPos);
 
-		
 		System.out.println("Shooter constructor end...");
 
 	}

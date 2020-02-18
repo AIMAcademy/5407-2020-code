@@ -19,7 +19,7 @@ class RobotMap {
     public final static int kCANId_ShooterMotor = 5;
     public final static int kCANId_ShooterTurretMotor = 6;
 
-    public final static int kCANId_PCM = 10;
+    public final static int kCANId_PCM = 0;
 
     // Pneumatic Control Module Ids
     public final static int kPCMPort_DriveShifter = 1;
