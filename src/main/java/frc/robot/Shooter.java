@@ -114,7 +114,7 @@ public class Shooter {
 		timAdjust = new Timer();
 		timAdjust.stop();
 
-		motPWMMouthMotor = new Spark(RobotMap.mouth);
+		motPWMMouthMotor = new Spark(RobotMap.kPWMPort_Mouth);
 
 		solBallPusherUpper = new Solenoid(RobotMap.kPCMPort_BallPusherUpper);
 		solBallPusherUpper.set(false);
