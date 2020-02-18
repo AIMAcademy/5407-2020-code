@@ -40,7 +40,11 @@ class RobotMap {
 
    public final static int kPWMPort_IntakeMoter = 0;
    public final static int kPWMPort_ShooterHeight = 5;
+<<<<<<< HEAD
    public final static int kPWMPort_Mouth = 1;
+=======
+   public final static int mouth = 1;
+>>>>>>> 78915f8a54941c6d388ff1e9d018b7a1733fb77e
 
    // Input Bottons
    public final static int kButton_ShooterHeightRaise = 4;

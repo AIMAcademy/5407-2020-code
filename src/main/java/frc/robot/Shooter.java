@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.AnalogPotentiometer;
 //import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Solenoid;
+import edu.wpi.first.wpilibj.Spark;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
@@ -77,6 +78,7 @@ public class Shooter {
 	AnalogPotentiometer anaTurretPos  = null;
 	AnalogInput anaShooterHeight = null;
 	Solenoid    solBallPusherUpper = null;
+	Spark motPWMMouthMotor;
 
 	public static final double kShooterHeight_Up = 1.0; 
 	public static final double kShooterHeight_Down = 0.0;
@@ -93,8 +95,8 @@ public class Shooter {
 	int iShooterHeight_Top =0;
 	int iShooterHeight_Bottom = 0;
 
-	double max_turret = .95;
-	double min_turret = .05;
+	double max_turret = .9;
+	double min_turret = .1;
 	
     /**
      * This function is run when this class is first created used for any initialization code.
@@ -111,6 +113,8 @@ public class Shooter {
 		System.out.println("Shooter constructor init...");
 		timAdjust = new Timer();
 		timAdjust.stop();
+
+		motPWMMouthMotor = new Spark(RobotMap.mouth);
 
 		solBallPusherUpper = new Solenoid(RobotMap.kPCMPort_BallPusherUpper);
 		solBallPusherUpper.set(false);
@@ -158,7 +162,6 @@ public class Shooter {
 
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
 		anaTurretPos = new AnalogPotentiometer(RobotMap.kAnalogPort_TurretPos);
-
 		
 		System.out.println("Shooter constructor end...");
 
@@ -212,14 +215,15 @@ public class Shooter {
 		motShooterHeight.set(dShooterHeightPower);
 
 		//turret posistion
-		if(anaTurretPos.get() >= max_turret && inputs.dTurretPower <= .5){
+		if(anaTurretPos.get() >= max_turret && inputs.dTurretPower <= 0){
 			motCANTurretMotor.set(ControlMode.PercentOutput, 0);
 		}
-		else if(anaTurretPos.get() >= min_turret && inputs.dTurretPower >= .5){
-			motCANShooterMotor.set(ControlMode.PercentOutput, 0);
+		else if(anaTurretPos.get() <= min_turret && inputs.dTurretPower >= 0){
+			motCANTurretMotor.set(ControlMode.PercentOutput, 0);
 		} else {
-			motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
+			motCANTurretMotor.set(ControlMode.PercentOutput, -inputs.dTurretPower);
 		}
+		//turret mouth
 	}
 
 	public void loadConfig(final Config config) {
