@@ -59,11 +59,18 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledPeriodic() {
+    public void disabledInit() {
 
-    telem.saveSpreadSheet();            // this an be called repeatly. One spreadheet is written, it is cleared. 
+      //config.load();
+      //shooter.reloadTables();
+    }
 
-  }
+  @Override
+    public void disabledPeriodic() {
+
+      telem.saveSpreadSheet();            // this an be called repeatly. One spreadheet is written, it is cleared. 
+
+    }
 
 
 
@@ -108,7 +115,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void teleopInit(){
-    //config.load();              // durign testing reload the config file to be sure we got updates
+    config.load();              // durign testing reload the config file to be sure we got updates
+    shooter.reloadTables();
   }
 
   /**

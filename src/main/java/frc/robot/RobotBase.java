@@ -85,16 +85,13 @@ public class RobotBase {
 		else if (inputs.bIntakeOut == true) { 									// Backwards
 			motIntake.set(-.5);			
 		}
-
-		if (inputs.bTeainatorToggle == true)  {
-
-			if (solTeainator.get() == true)
-				solTeainator.set(false);
-			else if (solTeainator.get() == false) {
-				solTeainator.set(true);
-			}
-
+		else {
+			motIntake.set(0.0);
 		}
+
+
+		//Setting Intake Soloniod to true/false
+		solTeainator.set(inputs.bTeainatorToggle);
 
     }
 

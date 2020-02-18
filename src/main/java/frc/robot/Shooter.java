@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.AnalogPotentiometer;
 //import edu.wpi.first.wpilibj.DigitalInput;
@@ -21,19 +22,26 @@ public class Shooter {
 
 	// create your variables
 
+	ShooterVelocity shootvel = null;
 	double dPid_Proportional = 0.2;
 	double dPid_Integral = 0.000;
 	double dPid_Derivative = 0.0;
 	double dPid_FeedForward = 0.0446;  // estimate of how many ticks we will see at any velocity in 100 ms.
 	double dVelocitySensitivity = 5.0;
 	double dRequestedVelocity = 0.0;
-	double dVelocityAdjust = 0.0;
+	double dLastRequestedVelocity = 0.0;
 	double dCLAdjust = 0.0;
 	double dCLError = 0.0;
 	boolean bCLAdjustedError = false;
 	double dCLErrorThreshold = 10;
 	String sCLStatus = "****";
 	boolean bReadyToShoot = false;
+
+	Limelight limelight = null;
+  
+	// Limelight http camera feeds
+	private final String LimelightHostname = "limelight";
+	private HttpCamera limelightFeed;
 	
 	/**
 	 * Which PID slot to pull gains from. Starting 2018, you can choose from
@@ -95,6 +103,13 @@ public class Shooter {
      */
     public Shooter(final Config config) {
 
+		shootvel = new ShooterVelocity("/home/lvuser", "shootervelocity.csv");
+		shootvel.loadTable();
+
+		// add limelight
+		limelight = new Limelight(LimelightHostname);
+		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
+
 		System.out.println("Shooter constructor init...");
 		timAdjust = new Timer();
 		timAdjust.stop();
@@ -108,6 +123,7 @@ public class Shooter {
 
 		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
 		motCANTurretMotor.setInverted(true); // invert direction to match gearing
+
 
 		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
@@ -141,6 +157,9 @@ public class Shooter {
 		motCANShooterMotor.set(ControlMode.Velocity, 0);
 		// motCANTurretMotor.set(ControlMode.Velocity, 0);
 
+
+
+
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
 		anaTurretPos = new AnalogPotentiometer(RobotMap.kAnalogPort_TurretPos);
 		
@@ -148,35 +167,39 @@ public class Shooter {
 
 	}
 
+	public void reloadTables(){
+
+		shootvel.loadTable();
+
+	}
+
+
+
 	public void update(final Inputs inputs, final Config config) {
 
-
-		if (inputs.bUpdateShooterPID == true) {
-
-			// config.load(); // force a reload of the config
-			// loadConfig(config); // reload from the nex config file
-
+		if( inputs.dRequestedVelocity != dLastRequestedVelocity){
+			dPid_FeedForward = shootvel.getFeedForwardRange(Integer.valueOf( (int) inputs.dRequestedVelocity));
 			this.updateShooterSettings();
 		}
-
-		if( inputs.bShooterVelocity_Lower == true){
-			dVelocityAdjust -= 1.0;
-		}
-
-		if( inputs.bShooterVelocity_Raise == true){
-			dVelocityAdjust += 1.0;
-		}
+		dLastRequestedVelocity = inputs.dRequestedVelocity;
 
 		if(inputs.bUpdateShooterPID == true){
 			adjustPIDError();
 			this.updateShooterSettings();
 		}
 
+		if( inputs.bShooterVelocitySaveSetting ){
+			shootvel.saveVelocity(Integer.valueOf( 
+									(int) motCANShooterMotor.getClosedLoopTarget() ), 
+									Double.valueOf(dPid_FeedForward) );
+		}
+
 		this.updateShooterVelocity(inputs);
 
 		this.solBallPusherUpper.set(inputs.bShooterLaunch);			// fire ball into shooter
 
-		// Control Shooter Height
+		// motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
+
 		dShooterHeightPower= kShooterHeight_Stop;
 		if (inputs.bShooterHeightRaise == true)
 			dShooterHeightPower = kShooterHeight_Up;
@@ -228,10 +251,20 @@ public class Shooter {
 		else if (dRequestedVelocity > 6900)
 			dCLAdjust *= .5;
 
+		if(Math.abs(dCLError) < 50 ){
+			dCLAdjust = Math.abs( dCLError * .0000001 );
+		} else if(Math.abs(dCLError) < 100 ) {
+			dCLAdjust = Math.abs( dCLError * .0000001 );
+		}else{
+			dCLAdjust = Math.abs( dCLError * .000001 );
+		}
+	
 		if (dCLError < 0.0)
 			dPid_FeedForward -= dCLAdjust;
 		else
 			dPid_FeedForward += dCLAdjust;
+
+		motCANShooterMotor.config_kF(kPIDLoopIdx, dPid_FeedForward, kTimeoutMs);
 
 	}
 
@@ -239,9 +272,9 @@ public class Shooter {
 		// this.motCANShooterMotor.reverseOutput(true);
 		// this.motCANShooterMotor.setPID(0.2, 0, 0);
 		/* Config the Velocity closed loop gains in slot0 */
-		motCANShooterMotor.config_kP(kPIDLoopIdx, dPid_Proportional, kTimeoutMs);
-		motCANShooterMotor.config_kI(kPIDLoopIdx, dPid_Integral, kTimeoutMs);
-		motCANShooterMotor.config_kD(kPIDLoopIdx, dPid_Derivative, kTimeoutMs);
+		//motCANShooterMotor.config_kP(kPIDLoopIdx, dPid_Proportional, kTimeoutMs);
+		//motCANShooterMotor.config_kI(kPIDLoopIdx, dPid_Integral, kTimeoutMs);
+		//motCANShooterMotor.config_kD(kPIDLoopIdx, dPid_Derivative, kTimeoutMs);
 		motCANShooterMotor.config_kF(kPIDLoopIdx, dPid_FeedForward, kTimeoutMs);
 
 		// motCANShooterMotor.enable();
@@ -252,43 +285,21 @@ public class Shooter {
 		dCLError = motCANShooterMotor.getClosedLoopError();
 		dCLAdjust = Math.abs(dCLError * .00001);
 
-		final double dAdjustTime = timAdjust.get();
+		//final double dAdjustTime = timAdjust.get();
 		sCLStatus = "Stopped";
 		bReadyToShoot = false;
 	
-		dRequestedVelocity = inputs.dRequestedVelocity + dVelocityAdjust; 
-
-		if( inputs.bShooterLaunch == false){
-			if( dRequestedVelocity  < 5000) {
-				sCLStatus = "Slow";
-
-				if(dAdjustTime > 0.0){
-					timAdjust.stop();
-					timAdjust.reset();
-				}
-			} else if( Math.abs(dCLError) < dCLErrorThreshold ){
-				sCLStatus = "Ready";
-				timAdjust.reset();
-				timAdjust.start();
-				bReadyToShoot = true;
-			} else {
-				sCLStatus = "Run";
-
-				if(dAdjustTime <= 0.0 ){
-					timAdjust.reset();
-					timAdjust.start();
-				}
-				else if( dAdjustTime > .5 ){
-					adjustPIDError();
-					updateShooterSettings();
-					timAdjust.reset();
-					timAdjust.start();
-					sCLStatus = "Adjust";
-				}
-			}
+		if( inputs.dRequestedVelocity  < 6500) {
+			sCLStatus = "Slow";
+		} else if( Math.abs(dCLError) < dCLErrorThreshold ){
+			sCLStatus = "Ready";
+			bReadyToShoot = true;
+		} else {
+			updateShooterSettings();
+			sCLStatus = "Adjust";
 		}
 
-		motCANShooterMotor.set(ControlMode.Velocity, dRequestedVelocity);
+		motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
 
 	}
 
@@ -356,4 +367,7 @@ public class Shooter {
 		}
 		
 	}
+
+
+	
 }
