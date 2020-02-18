@@ -23,9 +23,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Inputs {
 
 	// declare you variable up here
-	XboxController gamepadOperator = null;
-	XboxController gamepadDriver = null;
-	Joystick joyTestController = null;
+	private XboxController gamepadOperator = null;
+	private XboxController gamepadDriver = null;
+	public Joystick joyTestController = null;
 
 
 	public double dDriverPower = 0.0;
@@ -50,21 +50,23 @@ public class Inputs {
 	public boolean bShooterHeightRaise = false;
 	public boolean bShooterHeightLower = false;
 
+	private boolean bUseTestController = false;
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
-	private boolean bUseTestController = false;
+	public boolean bShooterVelocitySaveSetting = false;
 
 	// class Constructor initialize your variables here
     public Inputs() {
 		
-		try {
-			joyTestController = new Joystick( RobotMap.kUSBPort_TestJoyStick );
-			bUseTestController = true;
-		} 
-		catch(Exception e) {
-			bUseTestController = false;
-		}
-		bUseTestController = false;
+		//try {
+		joyTestController = new Joystick( RobotMap.kUSBPort_TestJoyStick );
+		//	bUseTestController = true;
+		//} 
+		//catch(Exception e) {
+		//	bUseTestController = false;
+		//}
+		//bUseTestController = false;
+		
 		gamepadDriver  = new XboxController(RobotMap.kUSBPort_DriverControl );
     	gamepadOperator = new XboxController(RobotMap.kUSBPort_OperatorControl );
     	zeroInputs();      				// this will init many variables
@@ -127,25 +129,34 @@ public class Inputs {
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
-		//dRequestedVelocity = convertJoystickAxisToValueRange(  gamepadDriver.getTwist(), 15000.0 ) ;    // force to + value only
+		temp = convertJoystickAxisToValueRange(  joyTestController.getTwist(), 100 ) ;    // force to + value only
+		if( temp < 2 ){
+			dRequestedVelocity = 0.0;
+		}else {
+			dRequestedVelocity = 6000 + temp * 100;
+		}
+		
+		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
+
 	
+												
+		bIntakeIn = false;
+		bIntakeOut = false;
 									
+		// give priority to the operator in these operations
 		if( gamepadOperator.getBumper(Hand.kLeft) == true){
 			bIntakeIn = true;
 		} else if( gamepadOperator.getBumper(Hand.kRight) == true){
 			bIntakeOut = true;
-		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  	//Prevent accident Hits
+		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  //Prevent accident Hits
 			bIntakeIn = true;			
-		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ 	//Prevent accident Hits
+		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
 			bIntakeOut = true;									
-		} else {														// If nothing pressed, it won't go
-			bIntakeIn = false;
-			bIntakeOut = false;
 		}
 
 		bTeainatorToggle = false;
 
-		if((gamepadOperator.getYButtonPressed()) == true || gamepadDriver.getYButtonPressed() == true) {
+		if((gamepadOperator.getYButton() == true || gamepadDriver.getYButton() == true)) {
 			if(bTeainatorLastToggle == false){
 				bTeainatorToggle = true;
 			}
@@ -157,15 +168,14 @@ public class Inputs {
 		bTeainatorLastToggle = bTeainatorToggle;
 
 
-		dShooterPower = 0.0;
-		if (bUseTestController == true)										//Use test controller
-			dShooterPower = joyTestController.getTwist();
-		else 
-			dShooterPower = gamepadOperator.getY(Hand.kLeft);
-
-
 		// Please put all buttons in ID order from the drive controller are placed here
-		bUpdateShooterPID = gamepadOperator.getAButtonPressed();  // only when it is pressed 
+		if( gamepadOperator.getAButtonPressed() == true ){
+			bUpdateShooterPID = true;  // only when it is pressed
+		}else if(joyTestController.getTopPressed() == true){
+			bUpdateShooterPID = true;  // only when it is pressed
+		} else { 
+			bUpdateShooterPID = false;  // only when it is pressed
+		}
 
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
@@ -173,14 +183,10 @@ public class Inputs {
 		if (dHoodPower < Math.abs(.5)) 								// dead zone
 			dHoodPower = 0.0; 										// kill to ensure no accidents
 
-		if (bUseTestController == true) {
+//		if (bUseTestController == true) {
 			bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
 			bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
-		}
-		else {
-			bShooterVelocity_Lower = false;
-			bShooterVelocity_Raise = false;	
-		}
+//		}
 
 		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7)		// Prevent accidental presses
 			bShooterLaunch = true;
