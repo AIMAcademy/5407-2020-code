@@ -153,19 +153,17 @@ public class Inputs {
 		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
 			bIntakeOut = true;									
 		}
-
 		bTeainatorToggle = false;
-
-		if((gamepadOperator.getYButton() == true || gamepadDriver.getYButton() == true)) {
-			if(bTeainatorLastToggle == false){
-				bTeainatorToggle = true;
+		if(gamepadOperator.getYButtonPressed() == true || gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
+			if(bTeainatorLastToggle == false){ 						//If the last toggle was false, set it to true
+				bTeainatorToggle = true; 
 			}
 			else {
-				bTeainatorToggle = false;
+				bTeainatorToggle = false;							//If last toggle was true, set it to false
 			}
 		}
 
-		bTeainatorLastToggle = bTeainatorToggle;
+		bTeainatorLastToggle = bTeainatorToggle;					//Setting LastToggle to Current Toggle
 
 
 		// Please put all buttons in ID order from the drive controller are placed here
