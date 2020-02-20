@@ -27,8 +27,8 @@ class RobotMap {
     public final static int kPCMPort_Teainator = 2;
     public final static int kPCMPort_BallPusherUpper = 4;
 
-   // Digital Inputs/Outputs
-   //public final static int kDigitalIOPort_ = 0;
+   // Digital Inputs
+   public final static int kDigitalInPort_BallInPlace = 9;
 
    // Analog Inputs
 

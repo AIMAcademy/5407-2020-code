@@ -42,7 +42,7 @@ public class Robot extends TimedRobot {
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
     shooter.addTelemetryHeaders( telem );
-    robotbase.addTelemetryHeaders( telem );
+    //robotbase.addTelemetryHeaders( telem );
 
   }
 
@@ -116,7 +116,7 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit(){
     config.load();              // durign testing reload the config file to be sure we got updates
-    shooter.reloadTables();
+    //shooter.reloadTables();
   }
 
   /**

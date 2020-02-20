@@ -127,8 +127,9 @@ public class Inputs {
 		temp  = gamepadDriver.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 		
-		temp  = gamepadOperator.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
-		dTurretPower = temp * Math.abs(temp * temp);     // quad it to desensatize the turret turn power 
+		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
+		dTurretPower = temp * Math.abs(temp * temp);     		// cube it to desensatize the turret turn power 
+		dTurretPower = dTurretPower * -1;						// reverse power so left is negative and rigth is positive
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
@@ -178,7 +179,7 @@ public class Inputs {
 		bTeainatorLastToggle = bTeainatorToggle;					//Setting LastToggle to Current Toggle
 
 
-		// Please put all buttons in ID order from the drive controller are placed here
+		/*** Please put all buttons in ID order from the drive controller are placed here
 		if( gamepadOperator.getAButtonPressed() == true ){
 			bUpdateShooterPID = true;  // only when it is pressed
 		}else if(joyTestController.getTopPressed() == true){
@@ -186,6 +187,7 @@ public class Inputs {
 		} else { 
 			bUpdateShooterPID = false;  // only when it is pressed
 		}
+		***/
 
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
