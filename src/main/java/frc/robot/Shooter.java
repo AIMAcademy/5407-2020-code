@@ -25,8 +25,8 @@ public class Shooter {
 
 	ShooterVelocity shootvel = null;
 	double dPid_Proportional = 0.2;
-	double dPid_Integral = 0.000;
-	double dPid_Derivative = 0.0;
+	double dPid_Integral = 0.0008;
+	double dPid_Derivative = 2.0;
 	double dPid_FeedForward = 0.04447826;  // estimate of how many ticks we will see at any velocity in 100 ms.
 	double d75PctVelocity = 17250;
 	double dRequestedPct = 0.0;
@@ -106,6 +106,7 @@ public class Shooter {
      * This function is run when this class is first created used for any initialization code.
      */
     public Shooter(final Config config) {
+		System.out.println("Shooter constructor init...");
 
 		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
@@ -116,7 +117,6 @@ public class Shooter {
 		limelight = new Limelight(LimelightHostname);
 		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
 
-		System.out.println("Shooter constructor init...");
 		timAdjust = new Timer();
 		timAdjust.stop();
 
@@ -244,9 +244,9 @@ public class Shooter {
 
 	public void loadConfig(final Config config) {
 
-		dPid_Proportional = config.getDouble("shooter.PID_P", 0.02);
-		dPid_Integral = config.getDouble("shooter.PID_I", 0.0003);
-		dPid_Derivative = config.getDouble("shooter.PID_D", 0.0005);
+		dPid_Proportional = config.getDouble("shooter.PID_P", 0.2);
+		dPid_Integral = config.getDouble("shooter.PID_I", 0.0008);
+		dPid_Derivative = config.getDouble("shooter.PID_D", 2.0);
 		dPid_FeedForward = config.getDouble("shooter.PID_F", 0.04447826);
 		dVelocitySensitivity = config.getDouble("shooter.VelocitySensitivity", 5.0);
 
