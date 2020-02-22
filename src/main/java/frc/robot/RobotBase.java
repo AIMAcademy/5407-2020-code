@@ -87,24 +87,8 @@ public class RobotBase {
 		else {
 			motIntake.set(0.0);
 		}
-
-
-		/**
-		if(inputs.bMouthIn == true) {
-			motMouth.set(1); 
-		}
-		else if(inputs.bMouthOut == true)
-		{
-			motMouth.set(-1); 
-		}
-		else 
-		{
-			motMouth.set(0); 
-		}
-		**/
 		//Setting Intake Soloniod to true/false
 		solTeainator.set(inputs.bTeainatorToggle);
-
     }
 
     public void addTelemetryHeaders(LCTelemetry telem ){
@@ -136,8 +120,5 @@ public class RobotBase {
 	    	SmartDashboard.putNumber("O_>>>Motors", dRightDrivePower);
     	}
 
-	}
-
-   
-    
+	}   
 }
