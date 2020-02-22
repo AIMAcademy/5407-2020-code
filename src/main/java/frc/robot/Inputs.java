@@ -1,5 +1,7 @@
 package frc.robot;
 
+import com.fasterxml.jackson.databind.ser.impl.FailingSerializer;
+
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
 
@@ -35,14 +37,15 @@ public class Inputs {
 	public double dHoodPower = 0.0;
 	public double dTestValue = 0.0;
 	public double dRequestedVelocity = 0.0;
+
 	
 	public boolean bShooterLaunch = false;
+	public boolean bShooterWheel = false;
+
+	public boolean bMouth = false;
 
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
-
-	public boolean bMouthIn = false; 
-	public boolean bMouthOut = false;
 
 	public boolean bTeainatorToggle = false;
 	public boolean bTeainatorLastToggle = false;	 
@@ -75,7 +78,7 @@ public class Inputs {
     	zeroInputs();      				// this will init many variables
     
     }
-    
+     
     // this is the order they will be in the spread sheet. 
     public void addTelemetryHeaders(LCTelemetry telem ){
 		telem.addColumn("I Driver Power");
@@ -118,13 +121,12 @@ public class Inputs {
     
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
-
     	// you can overload the inputs to test different ideas. 
 		//double temp  = F.getY(Hand.kLeft) ;	    //  we cook this down as full is too fast
-		double temp  = gamepadDriver.getY(Hand.kRight) ;	    			// we cook this down as full is too fast
+		double temp  = gamepadDriver.getY(Hand.kLeft) ;	    			// we cook this down as full is too fast
 		dDriverPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turn power 
 
-		temp  = gamepadDriver.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
+		temp  = gamepadDriver.getX(Hand.kRight) ;	    					// we cook this down as full is too fast
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 		
 		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
@@ -141,32 +143,21 @@ public class Inputs {
 		}
 		
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
-
-		if(gamepadOperator.getXButton() == true) {
-			bMouthIn = true; 
-		} else if(gamepadOperator.getBButton()) {
-			bMouthOut = true; 
-		}
-		else {
-			bMouthIn = false; 
-			bMouthOut = false; 
-		}
-
-										
+											
 		bIntakeIn = false;
 		bIntakeOut = false;
 									
 		// give priority to the operator in these operations
 		if( gamepadOperator.getBumper(Hand.kLeft) == true){
-			bIntakeIn = true;
-		} else if( gamepadOperator.getBumper(Hand.kRight) == true){
 			bIntakeOut = true;
+		} else if( gamepadOperator.getBumper(Hand.kRight) == true){
+			bIntakeIn = true;
 		} else if (gamepadDriver.getTriggerAxis(Hand.kLeft) > 0.7 ){  //Prevent accident Hits
 			bIntakeIn = true;			
 		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
 			bIntakeOut = true;									
 		}
-		bTeainatorToggle = false;
+
 		if(gamepadOperator.getYButtonPressed() == true || gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
 			if(bTeainatorLastToggle == false){ 						//If the last toggle was false, set it to true
 				bTeainatorToggle = true; 
@@ -178,36 +169,53 @@ public class Inputs {
 
 		bTeainatorLastToggle = bTeainatorToggle;					//Setting LastToggle to Current Toggle
 
-
-		/*** Please put all buttons in ID order from the drive controller are placed here
-		if( gamepadOperator.getAButtonPressed() == true ){
+		// Please put all buttons in ID order from the drive controller are placed here
+		if( gamepadOperator.getXButtonPressed() == true ){
 			bUpdateShooterPID = true;  // only when it is pressed
 		}else if(joyTestController.getTopPressed() == true){
 			bUpdateShooterPID = true;  // only when it is pressed
 		} else { 
 			bUpdateShooterPID = false;  // only when it is pressed
 		}
-		***/
+
+		bMouth = gamepadOperator.getAButton();
 
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
-		dHoodPower = gamepadOperator.getY(Hand.kRight);
-		if (dHoodPower < Math.abs(.5)) 								// dead zone
-			dHoodPower = 0.0; 										// kill to ensure no accidents
+		// dHoodPower = gamepadOperator.getY(Hand.kRight);
+		// if (dHoodPower < Math.abs(.5)) { 						// dead zone
+		// 	dHoodPower = 0.0; 										// kill to ensure no accidents
+		// }
+
+		if (gamepadOperator.getY(Hand.kRight) < -.6){
+			bShooterHeightLower = true;
+			bShooterHeightRaise = false;
+		} else if (gamepadOperator.getY(Hand.kRight) > .6){
+			bShooterHeightLower = false;
+			bShooterHeightRaise = true;
+		} else {
+			bShooterHeightLower = false;
+			bShooterHeightRaise = false;
+		}
 
 //		if (bUseTestController == true) {
-			bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
-			bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
+		bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
+		bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
 //		}
 
-		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7)		// Prevent accidental presses
+		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7) {		// Prevent accidental presses
 			bShooterLaunch = true;
-		else
+		} else {
 			bShooterLaunch = false;		
-	
-	
-	
 		}
+
+		if(gamepadOperator.getTriggerAxis(Hand.kLeft) > 0.7){ //only activate shooting wheels when asked
+			bShooterWheel = true;
+		} else {
+			bShooterWheel = false;
+		}
+
+	}
 
     
 	public int convertJoystickAxisToValueRange( double d_InputValue, int i_MaxValue )  {

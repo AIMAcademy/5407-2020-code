@@ -19,11 +19,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class Robot extends TimedRobot {
 
+  Limelight limelight = null;
   Inputs inputs = null;
   Shooter shooter = null;  
 	RobotBase robotbase = null;
 	LCTelemetry telem = null;
-	Config config = null;
+  Config config = null;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -31,6 +32,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+
+    limelight = new Limelight("limelight");
 
     config    = new Config("/home/lvuser/WPConfig_2020.cfg");  //init and open the config file
      	
