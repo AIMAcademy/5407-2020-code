@@ -23,7 +23,8 @@ public class Robot extends TimedRobot {
   Shooter shooter = null;  
 	RobotBase robotbase = null;
 	LCTelemetry telem = null;
-	Config config = null;
+  Config config = null;
+  
 
   /**
    * This function is run when the robot is first started up and should be
@@ -37,12 +38,12 @@ public class Robot extends TimedRobot {
     telem     = new LCTelemetry();	
     inputs    = new Inputs();			
     shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
-    robotbase = new RobotBase();
+    robotbase = new RobotBase(config);
    
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
     shooter.addTelemetryHeaders( telem );
-    //robotbase.addTelemetryHeaders( telem );
+    robotbase.addTelemetryHeaders( telem );
 
   }
 
@@ -125,6 +126,8 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     inputs.readValues();
+
+   
     shooter.update(inputs,config);
     robotbase.update(inputs);
     

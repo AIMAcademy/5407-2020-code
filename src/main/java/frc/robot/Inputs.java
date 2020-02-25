@@ -45,9 +45,8 @@ public class Inputs {
 	public boolean bMouthOut = false;
 
 	public boolean bTeainatorToggle = false;
-	public boolean bTeainatorLastToggle = false;	 
 
-	public boolean bUpdateShooterPID = false;
+	//public boolean bUpdateShooterPID = false;
 	public boolean bShiftBaseToHigh = false;
 
 	public boolean bShooterHeightRaise = false;
@@ -61,15 +60,7 @@ public class Inputs {
 	// class Constructor initialize your variables here
     public Inputs() {
 		
-		//try {
 		joyTestController = new Joystick( RobotMap.kUSBPort_TestJoyStick );
-		//	bUseTestController = true;
-		//} 
-		//catch(Exception e) {
-		//	bUseTestController = false;
-		//}
-		//bUseTestController = false;
-		
 		gamepadDriver  = new XboxController(RobotMap.kUSBPort_DriverControl );
     	gamepadOperator = new XboxController(RobotMap.kUSBPort_OperatorControl );
     	zeroInputs();      				// this will init many variables
@@ -107,7 +98,7 @@ public class Inputs {
 		telem.saveTrueBoolean("I Intake Out", this.bIntakeOut);
 		telem.saveDouble("I Req Vel", this.dRequestedVelocity );
 		telem.saveTrueBoolean("I Base Shift", this.bShiftBaseToHigh );
-		telem.saveTrueBoolean("I Update PID", this.bUpdateShooterPID);
+		//telem.saveTrueBoolean("I Update PID", this.bUpdateShooterPID);
 		telem.saveTrueBoolean("I PID F Lower", this.bShooterVelocity_Lower );
 		telem.saveTrueBoolean("I PID F Raise", this.bShooterVelocity_Raise );
 		//telem.saveDouble("I Driver Arch Power", this.d_DriverArchadePower );
@@ -137,7 +128,7 @@ public class Inputs {
 		if( temp < 2 ){
 			dRequestedVelocity = 0.0;
 		}else {
-			dRequestedVelocity = 6000 + temp * 100;
+			dRequestedVelocity = 6000 + temp * 100;			// raise in 100 ticks increments
 		}
 		
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
@@ -166,17 +157,12 @@ public class Inputs {
 		} else if (gamepadDriver.getTriggerAxis(Hand.kRight) > 0.7 ){ //Prevent accident Hits
 			bIntakeOut = true;									
 		}
-		bTeainatorToggle = false;
-		if(gamepadOperator.getYButtonPressed() == true || gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
-			if(bTeainatorLastToggle == false){ 						//If the last toggle was false, set it to true
-				bTeainatorToggle = true; 
-			}
-			else {
-				bTeainatorToggle = false;							//If last toggle was true, set it to false
-			}
-		}
 
-		bTeainatorLastToggle = bTeainatorToggle;					//Setting LastToggle to Current Toggle
+		if(gamepadOperator.getYButtonPressed() == true || gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
+			bTeainatorToggle = true;
+		}else{ 
+			bTeainatorToggle = false;
+		}
 
 
 		/*** Please put all buttons in ID order from the drive controller are placed here
@@ -195,19 +181,17 @@ public class Inputs {
 		if (dHoodPower < Math.abs(.5)) 								// dead zone
 			dHoodPower = 0.0; 										// kill to ensure no accidents
 
-//		if (bUseTestController == true) {
-			bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
-			bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
-//		}
+		bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
+		bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
 
-		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7)		// Prevent accidental presses
+		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
 			bShooterLaunch = true;
-		else
+		}else{
 			bShooterLaunch = false;		
-	
-	
-	
 		}
+	
+	
+	}
 
     
 	public int convertJoystickAxisToValueRange( double d_InputValue, int i_MaxValue )  {
@@ -260,7 +244,7 @@ public class Inputs {
 		SmartDashboard.putNumber("I_DriverPower",this.dDriverPower);
 		SmartDashboard.putNumber("I_DriverTurn",this.dDriverTurn);
 		SmartDashboard.putNumber("I_ShooterPower",this.dShooterPower);
-		SmartDashboard.putBoolean("I_UpdateShooterPID",bUpdateShooterPID);
+		//SmartDashboard.putBoolean("I_UpdateShooterPID",bUpdateShooterPID);
 		SmartDashboard.putNumber("I_TestValue",dTestValue);
 		SmartDashboard.putBoolean("I_TestController",bUseTestController);
 		

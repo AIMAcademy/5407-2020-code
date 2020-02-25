@@ -28,6 +28,7 @@ public class Shooter {
 	double dPid_Integral = 0.0008;
 	double dPid_Derivative = 2.0;
 	double dPid_FeedForward = 0.04447826;  // estimate of how many ticks we will see at any velocity in 100 ms.
+	int iPid_IntegralZone = 100;
 	double d75PctVelocity = 17250;
 	double dRequestedPct = 0.0;
 	double dVelocitySensitivity = 5.0;
@@ -39,6 +40,7 @@ public class Shooter {
 	//boolean bCLAdjustedError = false;
 	double dCLErrorThreshold = 15;
 	String sCLStatus = "****";
+	boolean bInClosedLoopMode = false;
 	boolean bUpToSpeed = false;
 
 	Limelight limelight = null;
@@ -138,6 +140,7 @@ public class Shooter {
 		motCANShooterMotor.set(ControlMode.Velocity, 0);
 		motCANShooterMotor.configPeakOutputForward(1.0, kTimeoutMs);
 		motCANShooterMotor.configPeakOutputReverse(-1.0, kTimeoutMs);
+	
 		updateShooterSettings();
 
 		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
@@ -249,6 +252,7 @@ public class Shooter {
 		dPid_Derivative = config.getDouble("shooter.PID_D", 2.0);
 		dPid_FeedForward = config.getDouble("shooter.PID_F", 0.04447826);
 		dVelocitySensitivity = config.getDouble("shooter.VelocitySensitivity", 5.0);
+		iPid_IntegralZone = config.getInt("shooter.PID_IntegralZone", 100);
 
 		dTurretLeftStop = config.getDouble("shooter.dTurretLeftStop", 0.9);
 		dTurretRigthStop = config.getDouble("shooter.dTurretRigthStop", 0.1);
@@ -266,6 +270,8 @@ public class Shooter {
 		motCANShooterMotor.config_kI(kPIDLoopIdx, dPid_Integral, kTimeoutMs);
 		motCANShooterMotor.config_kD(kPIDLoopIdx, dPid_Derivative, kTimeoutMs);
 		motCANShooterMotor.config_kF(kPIDLoopIdx, dPid_FeedForward, kTimeoutMs);
+		motCANShooterMotor.config_IntegralZone(kPIDLoopIdx, iPid_IntegralZone);
+		//motCANShooterMotor
 	}
 
 	public void updateShooterVelocity(final Inputs inputs) {
@@ -278,16 +284,23 @@ public class Shooter {
 		bUpToSpeed = false;
 	
 		if( inputs.dRequestedVelocity  < 8000) {
+			bInClosedLoopMode = false;
 			sCLStatus = "PCTMode";
 			motCANShooterMotor.set(ControlMode.PercentOutput, dRequestedPct);
 		} else if( Math.abs(dCLError) < dCLErrorThreshold ){
+			bInClosedLoopMode = true;
 			sCLStatus = "PID Ready";
 			bUpToSpeed = true;
-			motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
-		} else {
+			if(inputs.dRequestedVelocity != dLastRequestedVelocity)
+				motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
+			} else {
+			bInClosedLoopMode = true;
 			sCLStatus = "PID Adjust";
-			motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
+			if(inputs.dRequestedVelocity != dLastRequestedVelocity)
+				motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
 		}
+
+		dLastRequestedVelocity = inputs.dRequestedVelocity;
 
 	
 	}
@@ -320,7 +333,7 @@ public class Shooter {
 		telem.saveDouble("Sh CL PID F", dPid_FeedForward, 6 );
 		telem.saveDouble("Sh CL Error", motCANShooterMotor.getClosedLoopError() );
 		telem.saveDouble("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
-		telem.saveDouble("Sh CL Target Vel", motCANShooterMotor.getClosedLoopTarget());
+		if(bInClosedLoopMode) 	telem.saveDouble("Sh CL Target Vel", motCANShooterMotor.getClosedLoopTarget());
 		telem.saveTrueBoolean("Sh Up To Speed", this.bUpToSpeed);
 		telem.saveString("Sh Turret State", sTurretState);
     }
@@ -328,13 +341,16 @@ public class Shooter {
 	public void outputToDashboard(final boolean b_MinDisplay)  {
 		
 		//SmartDashboard.putNumber("Sh CL Req Vel", dRequestedVelocity );
-		SmartDashboard.putNumber("Sh CL PID Fx", dPid_FeedForward);
+		SmartDashboard.putNumber("Sh CL PID P", dPid_Proportional );
+		SmartDashboard.putNumber("Sh CL PID I", dPid_Integral );  // need more decimals here, default = 2
+		SmartDashboard.putNumber("Sh CL PID D", dPid_Derivative );
+		SmartDashboard.putNumber("Sh CL PID F", dPid_FeedForward );
 		SmartDashboard.putNumber("Sh CL Error", dCLError );
 		//SmartDashboard.putString("Sh CL Factor",String.valueOf(dCLErrorCorrectionFactor) );
 		//SmartDashboard.putNumber("Sh CL Adjust", dCLAdjust );
 		//SmartDashboard.putNumber("Sh CL AdjTim", timAdjust.get() );
 		SmartDashboard.putNumber("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
-		SmartDashboard.putNumber("Sh CL Target", motCANShooterMotor.getClosedLoopTarget() );
+		if(bInClosedLoopMode) SmartDashboard.putNumber("Sh CL Target", motCANShooterMotor.getClosedLoopTarget() );
 		SmartDashboard.putNumber("Sh CL Req Pct", dRequestedPct);
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
 		SmartDashboard.putBoolean("Sh Up To Speed", bUpToSpeed );
