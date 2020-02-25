@@ -78,11 +78,13 @@ public class Shooter {
 	int		i_Step = 0;
 
 	TalonFX  motCANShooterMotor = null;
-	TalonSRX motCANTurretMotor = null;
 	Timer    timAdjust		  = null;
-	AnalogPotentiometer anaTurretPos  = null;
+
+	TalonSRX motCANTurretMotor = null;
+	AnalogInput anaTurretPos  = null;
+
 	Solenoid    solBallPusherUpper = null;
-	Spark motPWMMouthMotor = null;
+	Spark 		motPWMMouthMotor = null;
 
 	DigitalInput digBallInPlace = null;
 	boolean bBallInPlace = false;
@@ -100,8 +102,8 @@ public class Shooter {
 	int iShooterHeight_Top =0;
 	int iShooterHeight_Bottom = 0;
 
-	double dTurretLeftStop = .9;
-	double dTurretRigthStop = .1;
+	int iTurretLeftStop = 155;
+	int iTurretRigthStop = 3000;
 	String sTurretState = "";
 	
     /**
@@ -144,12 +146,12 @@ public class Shooter {
 		updateShooterSettings();
 
 		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
-		motCANTurretMotor.setInverted(true); // invert direction to match gearing
+		motCANTurretMotor.setInverted(false); // invert direction to match gearing
 
 		motShooterHeight = new Servo(RobotMap.kPWMPort_ShooterHeight);
 
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
-		anaTurretPos = new AnalogPotentiometer(RobotMap.kAnalogPort_TurretPos);
+		anaTurretPos = new AnalogInput(RobotMap.kAnalogPort_TurretPos);
 		
 		System.out.println("Shooter constructor end...");
 
@@ -183,20 +185,16 @@ public class Shooter {
 		//							Double.valueOf(dPid_FeedForward) );
 		//}
 
-		this.updateShooterVelocity(inputs);
+		this.updateShooterVelocity(inputs);							// spinn the shootr wheel
 
 		this.solBallPusherUpper.set(inputs.bShooterLaunch);			// fire ball into shooter
 
 		// motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
 
 		if (digBallInPlace.get() == true) {		//Device is set for normally closed
-
 			bBallInPlace = false;   			//We have a connection so it's set to false
-
 		}else {
-			
 			bBallInPlace = true;				//Indicate open circut, means ball inplace or wiring failure
-		
 		}
 		
 		dShooterHeightPower= kShooterHeight_Stop;
@@ -215,30 +213,34 @@ public class Shooter {
 		//turret posistion
 		sTurretState = "Stopped"; 
 
-		if(anaTurretPos.get() >= dTurretLeftStop  && inputs.dTurretPower <= 0.0 ){	// and we ara skign to go left
-			inputs.dTurretPower = 0.0;		// set input to 0 to stop it.
-			sTurretState = "Full Left"; 
-		} else if(anaTurretPos.get() <= dTurretRigthStop && inputs.dTurretPower >= 0.0){
-			inputs.dTurretPower = 0.0;		// set input to 0 to stop it. 
-			sTurretState = "Full Right"; 
-		} else if(inputs.dTurretPower <= 0.0){
+		// negative power is left, positive power is right
+		if(inputs.dTurretPower <= 0.0){					// negative wants to go left
 			sTurretState = "<<<<<"; 
-		} else if(inputs.dTurretPower >= 0.0){
-			sTurretState = ">>>>>"; 
+
+			if(anaTurretPos.getAverageValue() <= iTurretLeftStop){
+				inputs.dTurretPower = 0.0;				// set input to 0 to stop it.
+				sTurretState = "Full Left"; 
+			} 
+		} else if(inputs.dTurretPower >= 0.0){			// positive want to go right
+			sTurretState = ">>>>>";
+
+			if(anaTurretPos.getAverageValue() >= iTurretRigthStop ){
+				inputs.dTurretPower = 0.0;				// set input to 0 to stop it. 
+				sTurretState = "Full Right"; 
+			}
 		} else {
 			sTurretState = "Stopped"; 
+			inputs.dTurretPower = 0.0;				// set input to 0 to stop it. 
 		}
 
-		motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
+		motCANTurretMotor.set(ControlMode.PercentOutput, -inputs.dTurretPower);	// invert for direction 
 
 		//turret mouth 
 
 		if (isShooterReadyToFire(inputs) == true) {
 
 			if (inputs.bShooterLaunch == true) {
-
 				solBallPusherUpper.set(true);
-
 			} 
 
 		}
@@ -254,8 +256,9 @@ public class Shooter {
 		dVelocitySensitivity = config.getDouble("shooter.VelocitySensitivity", 5.0);
 		iPid_IntegralZone = config.getInt("shooter.PID_IntegralZone", 100);
 
-		dTurretLeftStop = config.getDouble("shooter.dTurretLeftStop", 0.9);
-		dTurretRigthStop = config.getDouble("shooter.dTurretRigthStop", 0.1);
+
+		iTurretLeftStop = config.getInt("shooter.iTurretLeftStop", 155);
+		iTurretRigthStop = config.getInt("shooter.iTurretRigthStop", 3000);
 		
 		iShooterHeight_Bottom = config.getInt("shooter.ShooterHeight_Bottom", 500);
 		iShooterHeight_Top = config.getInt("shooter.ShooterHeight_top", 1000);
@@ -287,17 +290,24 @@ public class Shooter {
 			bInClosedLoopMode = false;
 			sCLStatus = "PCTMode";
 			motCANShooterMotor.set(ControlMode.PercentOutput, dRequestedPct);
-		} else if( Math.abs(dCLError) < dCLErrorThreshold ){
+		} else { 
+
 			bInClosedLoopMode = true;
-			sCLStatus = "PID Ready";
-			bUpToSpeed = true;
-			if(inputs.dRequestedVelocity != dLastRequestedVelocity)
+
+			if(inputs.dRequestedVelocity != dLastRequestedVelocity){
 				motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
-			} else {
-			bInClosedLoopMode = true;
-			sCLStatus = "PID Adjust";
-			if(inputs.dRequestedVelocity != dLastRequestedVelocity)
-				motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
+				updateShooterSettings();
+			}
+			else {
+				if( Math.abs(dCLError) < dCLErrorThreshold ){
+					sCLStatus = "PID Ready";
+					bUpToSpeed = true;
+				} else {
+					sCLStatus = "PID Adjust";
+					bUpToSpeed = false;
+				}
+			}
+
 		}
 
 		dLastRequestedVelocity = inputs.dRequestedVelocity;
@@ -355,6 +365,10 @@ public class Shooter {
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
 		SmartDashboard.putBoolean("Sh Up To Speed", bUpToSpeed );
 		SmartDashboard.putBoolean("Sh Ball In Place", bBallInPlace);
+		SmartDashboard.putNumber("Sh Turret Pos", anaTurretPos.getAverageValue());
+		SmartDashboard.putNumber("Sh Height", anaShooterHeight.getAverageValue() );
+		SmartDashboard.putString("Sh Turret State", sTurretState );
+
 		
 		if( b_MinDisplay == false){
 		}

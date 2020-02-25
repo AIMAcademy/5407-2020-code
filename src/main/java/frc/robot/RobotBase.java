@@ -7,6 +7,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 //import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel;
 
 public class RobotBase {
 
@@ -21,6 +23,9 @@ public class RobotBase {
 	TalonFX motRightDriveMotorA = null;
 	TalonFX motRightDriveMotorB = null;
 	Spark motIntake = null;
+	Spark motRunway = null;
+	CANSparkMax motWinchLeftMotor = null;
+	CANSparkMax motWinchRightMotor = null;
 
 	Compressor mCompressor = null;
 	String sCompressorCLState = "UNK";
@@ -50,21 +55,23 @@ public class RobotBase {
 		motRightDriveMotorA = new TalonFX(RobotMap.kCANId_LeftDriveMotorA);
 		motRightDriveMotorB = new TalonFX(RobotMap.kCANId_LeftDriveMotorB);
 
+		motWinchLeftMotor = new CANSparkMax(RobotMap.kCANId_WinchLeftMotor,  CANSparkMaxLowLevel.MotorType.kBrushless );
+		motWinchRightMotor = new CANSparkMax(RobotMap.kCANId_WinchRightMotor, CANSparkMaxLowLevel.MotorType.kBrushless);
+
 		mCompressor = new Compressor( RobotMap.kCANId_PCM );
 		mCompressor.enabled();
 		mCompressor.setClosedLoopControl(true);
 		sCompressorCLState = "Normal";
 
-		if(bDev_StopCompressor == true){
-			mCompressor.stop();
-			sCompressorCLState = "Dev Stopped";
-		}
+		SetDevModes();
 
 		solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
 		solTeainator = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_Teainator);
 
 
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
+		motRunway = new Spark(RobotMap.kPWMPort_RunwayMotor);
+		motRunway.setInverted(true);
 
 		// Make sure motors are stopped
 		motLeftDriveMotorA.set(ControlMode.PercentOutput, 0.0);
@@ -80,6 +87,17 @@ public class RobotBase {
 		bDev_StopCompressor = config.getBoolean("robotbase.bDev_StopCompressor", false);
 		bDev_StopDriveWheels = config.getBoolean("robotbase.bDev_StopDriveWheels", false); 
 
+	}
+
+	public void SetDevModes(){
+
+		if(bDev_StopCompressor == true){
+			mCompressor.stop();
+			sCompressorCLState = "Dev Stopped";
+		} else {
+			mCompressor.start();
+			sCompressorCLState = "Normal";
+		}
 	}
     /**
      * This function is run to update the output objects with data. 
@@ -111,43 +129,25 @@ public class RobotBase {
 		// Powering Intake Motors
 		if (inputs.bIntakeIn == true) {											// Forward
 			motIntake.set(.5);
+			motRunway.set(.5);		
 		}
 		else if (inputs.bIntakeOut == true) { 									// Backwards
-			motIntake.set(-.5);			
+			motIntake.set(-.5);	
+			motRunway.set(-.5);		
 		}
 		else {
 			motIntake.set(0.0);
+			motRunway.set(0.0);		
 		}
 
-
-		/**
-		if(inputs.bMouthIn == true) {
-			motMouth.set(1); 
-		}
-		else if(inputs.bMouthOut == true)
-		{
-			motMouth.set(-1); 
-		}
-		else 
-		{
-			motMouth.set(0); 
-		}
-		**/
 		//Setting Intake Soloniod to true/false
+		if( inputs.bTeainatorDown == true)
+			solTeainator.set(true);
 
-		bTeainatorState = solTeainator.get();							// capture here so we can see it in telemetry 
-		if( inputs.bTeainatorToggle == true && bLastTeainatorToggle == false) {
+		if( inputs.bTeainatorUp == true)
+			solTeainator.set(false);
 
-			if( bTeainatorState == true){
-				bTeainatorState = false;
-			} else if(bTeainatorState == false){
-				bTeainatorState = true;
-			}
-		} 
-		solTeainator.set(bTeainatorState);
-		bLastTeainatorToggle = inputs.bTeainatorToggle;	 
-
-    }
+	}
 
 	public void allowCompressorToRun(boolean bDesiredState){
 

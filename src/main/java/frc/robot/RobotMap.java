@@ -19,6 +19,8 @@ class RobotMap {
     public final static int kCANId_LeftDriveMotorB = 4;
     public final static int kCANId_ShooterMotor = 5;
     public final static int kCANId_ShooterTurretMotor = 6;
+    public final static int kCANId_WinchLeftMotor = 8;
+    public final static int kCANId_WinchRightMotor = 7;
 
     public final static int kCANId_PDP = 11;
 
@@ -39,8 +41,10 @@ class RobotMap {
    // PWM Ports
 
    public final static int kPWMPort_IntakeMoter = 0;
-   public final static int kPWMPort_ShooterHeight = 5;
    public final static int kPWMPort_Mouth = 1;
+   // what is in 2????
+   public final static int kPWMPort_RunwayMotor = 3;
+   public final static int kPWMPort_ShooterHeight = 5;
 
    // Input Bottons
    public final static int kButton_ShooterHeightRaise = 4;

@@ -64,6 +64,9 @@ public class Robot extends TimedRobot {
 
       //config.load();
       //shooter.reloadTables();
+      //robotbase.loadConfig();
+      //robotbase.SetDevModes();
+
     }
 
   @Override
@@ -118,7 +121,10 @@ public class Robot extends TimedRobot {
   public void teleopInit(){
     config.load();              // durign testing reload the config file to be sure we got updates
     //shooter.reloadTables();
-  }
+    robotbase.loadConfig();
+    robotbase.SetDevModes();
+    shooter.loadConfig(config);
+}
 
   /**
    * This function is called periodically during operator control.
@@ -126,8 +132,6 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     inputs.readValues();
-
-   
     shooter.update(inputs,config);
     robotbase.update(inputs);
     
@@ -145,7 +149,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testInit(){
-    config.load();              // durign testing reload the config file to be sure we got updates
   }
 
 

@@ -44,7 +44,8 @@ public class Inputs {
 	public boolean bMouthIn = false; 
 	public boolean bMouthOut = false;
 
-	public boolean bTeainatorToggle = false;
+	public boolean bTeainatorUp = false;
+	public boolean bTeainatorDown = false;
 
 	//public boolean bUpdateShooterPID = false;
 	public boolean bShiftBaseToHigh = false;
@@ -119,8 +120,10 @@ public class Inputs {
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 		
 		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
-		dTurretPower = temp * Math.abs(temp * temp);     		// cube it to desensatize the turret turn power 
-		dTurretPower = dTurretPower * -1;						// reverse power so left is negative and rigth is positive
+		dTurretPower = temp * Math.abs(temp * temp * temp);    	// quad it to desensatize the turret turn power 
+																// no reverse as the cotroller x left is negative and right is positive
+																
+		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
@@ -133,15 +136,8 @@ public class Inputs {
 		
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
 
-		if(gamepadOperator.getXButton() == true) {
-			bMouthIn = true; 
-		} else if(gamepadOperator.getBButton()) {
-			bMouthOut = true; 
-		}
-		else {
-			bMouthIn = false; 
-			bMouthOut = false; 
-		}
+		bMouthIn = false; 
+		bMouthOut = false; 
 
 										
 		bIntakeIn = false;
@@ -158,31 +154,28 @@ public class Inputs {
 			bIntakeOut = true;									
 		}
 
-		if(gamepadOperator.getYButtonPressed() == true || gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
-			bTeainatorToggle = true;
-		}else{ 
-			bTeainatorToggle = false;
+
+		bTeainatorDown = false;
+		bTeainatorUp = false;
+
+		if(gamepadOperator.getYButtonPressed() == true || 
+				gamepadDriver.getYButtonPressed() == true) { //If operator or driver presses Y intake will be put out
+			bTeainatorDown = true;
 		}
 
-
-		/*** Please put all buttons in ID order from the drive controller are placed here
-		if( gamepadOperator.getAButtonPressed() == true ){
-			bUpdateShooterPID = true;  // only when it is pressed
-		}else if(joyTestController.getTopPressed() == true){
-			bUpdateShooterPID = true;  // only when it is pressed
-		} else { 
-			bUpdateShooterPID = false;  // only when it is pressed
+		if(gamepadOperator.getAButtonPressed() == true || 
+				gamepadDriver.getAButtonPressed() == true) { //If operator or driver presses A intake will be put out
+			bTeainatorUp = true;
 		}
-		***/
-
+	
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
 		dHoodPower = gamepadOperator.getY(Hand.kRight);
 		if (dHoodPower < Math.abs(.5)) 								// dead zone
 			dHoodPower = 0.0; 										// kill to ensure no accidents
 
-		bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
-		bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
+		//bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
+		//bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
 
 		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
 			bShooterLaunch = true;
@@ -247,6 +240,7 @@ public class Inputs {
 		//SmartDashboard.putBoolean("I_UpdateShooterPID",bUpdateShooterPID);
 		SmartDashboard.putNumber("I_TestValue",dTestValue);
 		SmartDashboard.putBoolean("I_TestController",bUseTestController);
+
 		
 		if ( b_MinDisplay == false ){
 		}
