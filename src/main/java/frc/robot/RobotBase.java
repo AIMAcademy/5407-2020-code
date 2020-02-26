@@ -185,11 +185,10 @@ public class RobotBase {
 	// Show what variables we want to the SmartDashboard
 	public void outputToDashboard(boolean b_MinDisplay)  {
 
-		if( b_MinDisplay == true ){
-			SmartDashboard.putNumber("O_<<<Motors", dLeftDrivePower);
-			SmartDashboard.putNumber("O_>>>Motors", dRightDrivePower);
-			return;
-    	}
+		SmartDashboard.putNumber("O_<<<Motors", dLeftDrivePower);
+		SmartDashboard.putNumber("O_>>>Motors", dRightDrivePower);
+
+		if( b_MinDisplay == true ) return;
 
 		SmartDashboard.putNumber("RB Intake Speed", this.motIntake.getSpeed());
 		SmartDashboard.putBoolean("RB Tea State", this.solTeainator.get());

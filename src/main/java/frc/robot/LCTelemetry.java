@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -318,8 +319,8 @@ public class LCTelemetry {
         listColumnData[i_TotalColumns++] =						// Save the Telemetry generated columns first in the proper order, notice increment  
         		String.format( "%.2f", tim_Time.get() );
         
-        //listColumnData[i_TotalColumns++] = 
-        //			String.format( "%.2f", driverStation.get() );
+        listColumnData[i_TotalColumns++] = 
+        			String.format( "%.2f", RobotController.getBatteryVoltage() );
 
         String s_Mode = "";
         
@@ -474,8 +475,8 @@ public class LCTelemetry {
         try {
 			fileHandle = new FileWriter( getFileName() );
 
-			//String headerRow = "Timer\tBatt Volts\tMode\t";			// these are common fields LCTelemetry adds
-			String headerRow = "Timer\tMode\t";			// these are common fields LCTelemetry adds
+			String headerRow = "Timer\tBatt Volts\tMode\t";			// these are common fields LCTelemetry adds
+			//String headerRow = "Timer\tMode\t";			// these are common fields LCTelemetry adds
 			
             for (int i = 0; listColumns[i] != null; i++) {
             	headerRow += listColumns[i] + '\t';					// the \t inserts a tab character easily read as a column in excel. 

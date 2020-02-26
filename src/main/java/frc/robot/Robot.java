@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -34,7 +35,7 @@ public class Robot extends TimedRobot {
   public void robotInit() {
 
     config    = new Config("/home/lvuser/WPConfig_2020.cfg");  //init and open the config file
-     	
+       
     telem     = new LCTelemetry();	
     inputs    = new Inputs();			
     shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
