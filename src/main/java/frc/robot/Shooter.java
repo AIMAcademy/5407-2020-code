@@ -4,9 +4,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.AnalogInput;
-import edu.wpi.first.wpilibj.AnalogPotentiometer;
 import edu.wpi.first.wpilibj.DigitalInput;
-//import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
@@ -15,7 +13,6 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
-//import com.ctre.phoenix.sensors.CANCoder;
 
 
 public class Shooter {
@@ -85,6 +82,7 @@ public class Shooter {
 
 	Solenoid    solBallPusherUpper = null;
 	Spark 		motPWMMouthMotor = null;
+	FireSequence mFireSequence = null;
 
 	DigitalInput digBallInPlace = null;
 	boolean bBallInPlace = false;
@@ -105,6 +103,8 @@ public class Shooter {
 	int iTurretLeftStop = 155;
 	int iTurretRigthStop = 3000;
 	String sTurretState = "";
+
+	boolean bLastShooterLaunch = false;
 	
     /**
      * This function is run when this class is first created used for any initialization code.
@@ -153,6 +153,9 @@ public class Shooter {
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
 		anaTurretPos = new AnalogInput(RobotMap.kAnalogPort_TurretPos);
 		
+		mFireSequence = new FireSequence();
+		mFireSequence.reset();
+
 		System.out.println("Shooter constructor end...");
 
 	}
@@ -168,26 +171,7 @@ public class Shooter {
 
 	public void update(final Inputs inputs, final Config config) {
 
-		//if( inputs.dRequestedVelocity != dLastRequestedVelocity){
-		//	dPid_FeedForward = shootvel.getFeedForwardRange(Integer.valueOf( (int) inputs.dRequestedVelocity));
-		//	this.updateShooterSettings();
-		//}
-		//dLastRequestedVelocity = inputs.dRequestedVelocity;
-
-		//if(inputs.bUpdateShooterPID == true){
-		//	adjustPIDError();
-		//	this.updateShooterSettings();
-		//}
-
-		//if( inputs.bShooterVelocitySaveSetting ){
-		//	shootvel.saveVelocity(Integer.valueOf( 
-		//							(int) motCANShooterMotor.getClosedLoopTarget() ), 
-		//							Double.valueOf(dPid_FeedForward) );
-		//}
-
 		this.updateShooterVelocity(inputs);							// spinn the shootr wheel
-
-		this.solBallPusherUpper.set(inputs.bShooterLaunch);			// fire ball into shooter
 
 		// motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
 
@@ -237,13 +221,18 @@ public class Shooter {
 
 		//turret mouth 
 
-		if (isShooterReadyToFire(inputs) == true) {
+		if (inputs.bShooterLaunch == true && bLastShooterLaunch == false )
+			mFireSequence.reset();
 
-			if (inputs.bShooterLaunch == true) {
-				solBallPusherUpper.set(true);
+		if( inputs.bShooterLaunch == true ){
+
+			if(bUpToSpeed == true){
+				mFireSequence.execute(inputs, this);
 			} 
 
 		}
+
+		bLastShooterLaunch = inputs.bShooterLaunch;
 
 	}
 
@@ -253,12 +242,12 @@ public class Shooter {
 		dPid_Integral = config.getDouble("shooter.PID_I", 0.0008);
 		dPid_Derivative = config.getDouble("shooter.PID_D", 2.0);
 		dPid_FeedForward = config.getDouble("shooter.PID_F", 0.04447826);
-		dVelocitySensitivity = config.getDouble("shooter.VelocitySensitivity", 5.0);
+		dVelocitySensitivity = config.getDouble("shooter.VelocitySensitivity", 25.0);
 		iPid_IntegralZone = config.getInt("shooter.PID_IntegralZone", 100);
 
 
-		iTurretLeftStop = config.getInt("shooter.iTurretLeftStop", 155);
-		iTurretRigthStop = config.getInt("shooter.iTurretRigthStop", 3000);
+		iTurretLeftStop = config.getInt("shooter.iTurretLeftStop", 300);
+		iTurretRigthStop = config.getInt("shooter.iTurretRigthStop", 3400);
 		
 		iShooterHeight_Bottom = config.getInt("shooter.ShooterHeight_Bottom", 500);
 		iShooterHeight_Top = config.getInt("shooter.ShooterHeight_top", 1000);
@@ -317,7 +306,7 @@ public class Shooter {
 
 	private boolean isShooterReadyToFire(Inputs inputs) {
 
-		if( bBallInPlace == true && bUpToSpeed == true)
+		if( bUpToSpeed == true)
 			return true;
 
     	return false;
@@ -377,4 +366,94 @@ public class Shooter {
 
 
 	
+}
+
+class FireSequence{
+
+	int iStep = 0;
+	int iLastStep = -1;
+	boolean bStepIsSetUp = false;
+	Timer timStepTimer = null;
+
+	FireSequence(){
+		timStepTimer = new Timer();
+		timStepTimer.start();
+	}
+
+	void reset(){
+		iStep = 0;
+		iLastStep = -1;
+	}
+
+	void execute(Inputs inputs, Shooter shooter){
+
+		if( iLastStep != iStep){
+			timStepTimer.reset();
+			bStepIsSetUp = false;			// used to set up contitiones within a step before it starts
+		}
+
+		switch (iStep) {
+
+			case 0:			// Initilaize any thing you need to 
+				shooter.solBallPusherUpper.set(false);
+				iStep+=1;
+				break;
+
+			case 1:										// see if we have a ball in place to shoot
+				if(shooter.bBallInPlace == true){
+					iStep=10;							// ball ready to fire
+				}else{
+					iStep=2;							// no ball, go get one 
+				}
+
+				break;
+
+			case 2:
+				shooter.motPWMMouthMotor.setSpeed(.75); // pull in the next ball
+
+				if(shooter.bBallInPlace == true){				// we see a ball
+					shooter.motPWMMouthMotor.setSpeed(0.0);	// stop pull
+					iStep += 1;							
+				}
+
+				break;
+
+			case 3:
+
+				if(shooter.bBallInPlace == false){			// no ball go back to step 2
+					iStep = 2;
+					break;
+				}
+
+				shooter.motPWMMouthMotor.setSpeed(-.50);	// roll ball intake back at 1/2 speed
+															// this will pull back the nexf ball if there is one. 
+
+				if( timStepTimer.get() > .15 && shooter.bBallInPlace == true  ){  	// do this for .15 seconds and ball in place
+					shooter.motPWMMouthMotor.setSpeed(0.0);						  	// times up, stop motor. 
+					iStep = 10;														// step 10
+				}
+
+				break;
+
+			case 10:
+				if(shooter.bBallInPlace == false){			// final check if we have a ball
+					iStep = 2;								// look for ball
+				} else {
+					iStep+=1;
+				}
+
+				break;
+
+			case 20:
+				shooter.solBallPusherUpper.set(true);
+
+				if( timStepTimer.get() > .10 ){					// let ball get out 
+					shooter.solBallPusherUpper.set(false);
+					iStep = 0;									// restart
+				}	
+
+				break;
+
+		}
+	}
 }
