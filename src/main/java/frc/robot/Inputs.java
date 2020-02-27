@@ -29,6 +29,9 @@ public class Inputs {
 
 
 	public double dDriverPower = 0.0;
+	public double dLeftWinchPower = 0.0;
+	public double dRightWinchPower = 0.0;
+
 	public double dDriverTurn = 0.0;
 	public double dShooterPower = 0.0;
 	public double dTurretPower = 0.0;
@@ -57,6 +60,9 @@ public class Inputs {
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
 	public boolean bShooterVelocitySaveSetting = false;
+
+	public boolean bInEndGame  = false;
+	double dMaxWinchPower = .65; 
 
 	// class Constructor initialize your variables here
     public Inputs() {
@@ -111,18 +117,42 @@ public class Inputs {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
 
+		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
+			bInEndGame = true;
+		}
+
+		if(gamepadDriver.getStartButton() == true && gamepadOperator.getStartButton() == true){
+			bInEndGame = false;
+		}
+
+		dLeftWinchPower = 0.0;
+		dRightWinchPower = 0.0;
+
     	// you can overload the inputs to test different ideas. 
 		//double temp  = F.getY(Hand.kLeft) ;	    //  we cook this down as full is too fast
-		double temp  = gamepadDriver.getY(Hand.kRight) ;	    			// we cook this down as full is too fast
+		double temp  = gamepadDriver.getY(Hand.kRight) ;	    // we cook this down as full is too fast
 		dDriverPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turn power 
-
+		
 		temp  = gamepadDriver.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
-		
+
 		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
 		dTurretPower = temp * Math.abs(temp * temp * temp);    	// quad it to desensatize the turret turn power 
-																// no reverse as the cotroller x left is negative and right is positive
-																
+
+		temp  = gamepadOperator.getY(Hand.kLeft) ;	    		// we cook this down as full is too fast
+		dLeftWinchPower = temp * Math.abs(temp * temp * temp);  // set these now, adjust when we determine end game
+
+		temp  = gamepadOperator.getY(Hand.kRight) ;	    		// we cook this down as full is too fast
+		dRightWinchPower = temp * Math.abs(temp * temp * temp);  // set these now, adjust when we determine end game
+
+		if(gamepadOperator.getPOV() == 0){
+			dRightWinchPower = dMaxWinchPower;
+			dLeftWinchPower = dMaxWinchPower;
+		} else if(gamepadOperator.getPOV() == 180){
+			dRightWinchPower = -dMaxWinchPower;
+			dLeftWinchPower = -dMaxWinchPower;
+		}
+
 		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
@@ -170,10 +200,38 @@ public class Inputs {
 	
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
-		dHoodPower = gamepadOperator.getY(Hand.kRight);
-		if (dHoodPower < Math.abs(.5)) 								// dead zone
-			dHoodPower = 0.0; 										// kill to ensure no accidents
+		bShooterHeightRaise = false;
+		bShooterHeightLower = false;
+		temp = gamepadOperator.getY(Hand.kRight);
+		if (Math.abs(temp) > .5){ 								// dead zone
 
+			if(temp > 0.0){
+				bShooterHeightRaise = true;
+			} else if( temp < 0.0){
+				bShooterHeightLower = true;
+			}
+
+		}
+
+		// the end game is when we are ready to hang. Slower movements are better
+		if( bInEndGame == false){
+			dLeftWinchPower = 0.0;		// kill these as they should not be used until the end game. 
+			dRightWinchPower = 0.0;
+		}
+
+		if( bInEndGame == true){
+			dDriverPower *= .3;			// allow only small movements
+			dDriverTurn *= .3;
+			dTurretPower = 0.0;			// not allowed in end game mode
+			bShooterHeightRaise = false;
+			bShooterHeightLower = false;
+		}
+
+
+//		dRightWinchPower *= .65;
+//		dLeftWinchPower *= .65;
+	
+		
 		//bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
 		//bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
 
@@ -237,9 +295,9 @@ public class Inputs {
 		SmartDashboard.putNumber("I_DriverPower",this.dDriverPower);
 		SmartDashboard.putNumber("I_DriverTurn",this.dDriverTurn);
 		SmartDashboard.putNumber("I_ShooterPower",this.dShooterPower);
-		//SmartDashboard.putBoolean("I_UpdateShooterPID",bUpdateShooterPID);
 		SmartDashboard.putNumber("I_TestValue",dTestValue);
-		SmartDashboard.putBoolean("I_TestController",bUseTestController);
+		SmartDashboard.putBoolean("I In End Game",bInEndGame);
+		SmartDashboard.putBoolean("I Sh Launch",bShooterLaunch);	
 
 		
 		if ( b_MinDisplay == false ){
@@ -250,6 +308,8 @@ public class Inputs {
 
 	
 	public void loadConfig(Config config)  {
+
+		dMaxWinchPower = config.getDouble("inputs.dMaxWinchPower", .65);
 
         //bp_FastOperation = config.getBoolean("b_FastOperation", true);	// ****  we do not zero this **** 
 //		b_IsTestMode = Preferences.getInstance().getBoolean("I_IsTestMode", false);

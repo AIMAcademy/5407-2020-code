@@ -21,9 +21,9 @@ public class Shooter {
 	// create your variables
 
 	ShooterVelocity shootvel = null;
-	double dPid_Proportional = 0.2;
+	double dPid_Proportional = 7.0;
 	double dPid_Integral = 0.0008;
-	double dPid_Derivative = 2.0;
+	double dPid_Derivative = 0.7;
 	double dPid_FeedForward = 0.04447826;  // estimate of how many ticks we will see at any velocity in 100 ms.
 	int iPid_IntegralZone = 100;
 	double d75PctVelocity = 17250;
@@ -104,6 +104,8 @@ public class Shooter {
 	int iTurretRigthStop = 3000;
 	String sTurretState = "";
 
+	double dPWMMouthMotorPower = 0.0;
+
 	boolean bLastShooterLaunch = false;
 	
     /**
@@ -112,10 +114,10 @@ public class Shooter {
     public Shooter(final Config config) {
 		System.out.println("Shooter constructor init...");
 
-		loadConfig(config); // do this here to be sure we have the values updated before we used them.
+		mFireSequence = new FireSequence();  // do this here to be sure it is ready when loadConfig is called. 
+		mFireSequence.reset();
 
-		//shootvel = new ShooterVelocity("/home/lvuser", "shootervelocity.csv");
-		//shootvel.loadTable();
+		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
 		// add limelight
 		limelight = new Limelight(LimelightHostname);
@@ -139,11 +141,12 @@ public class Shooter {
 		motCANShooterMotor.configClosedloopRamp(3);  	// ramp up time so we do not cause a huge surge in current 
 		motCANShooterMotor.configNominalOutputForward(0, kTimeoutMs);
 		motCANShooterMotor.configNominalOutputReverse(0, kTimeoutMs);
-		motCANShooterMotor.set(ControlMode.Velocity, 0);
+		motCANShooterMotor.set(ControlMode.Velocity, 0.0);
 		motCANShooterMotor.configPeakOutputForward(1.0, kTimeoutMs);
 		motCANShooterMotor.configPeakOutputReverse(-1.0, kTimeoutMs);
+		motCANShooterMotor.set(ControlMode.Velocity, 0.0);
 	
-		updateShooterSettings();
+		//updateShooterSettings();
 
 		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
 		motCANTurretMotor.setInverted(false); // invert direction to match gearing
@@ -153,9 +156,6 @@ public class Shooter {
 		anaShooterHeight = new AnalogInput(RobotMap.kAnalogPort_ShooterHeight);
 		anaTurretPos = new AnalogInput(RobotMap.kAnalogPort_TurretPos);
 		
-		mFireSequence = new FireSequence();
-		mFireSequence.reset();
-
 		System.out.println("Shooter constructor end...");
 
 	}
@@ -175,12 +175,13 @@ public class Shooter {
 
 		// motCANTurretMotor.set(ControlMode.PercentOutput, inputs.dTurretPower);
 
-		if (digBallInPlace.get() == true) {		//Device is set for normally closed
+		if (digBallInPlace.get() == false) {		//Device is set for normally closed
 			bBallInPlace = false;   			//We have a connection so it's set to false
 		}else {
 			bBallInPlace = true;				//Indicate open circut, means ball inplace or wiring failure
 		}
 		
+
 		dShooterHeightPower= kShooterHeight_Stop;
 		if (inputs.bShooterHeightRaise == true)
 			dShooterHeightPower = kShooterHeight_Up;
@@ -227,11 +228,13 @@ public class Shooter {
 		if( inputs.bShooterLaunch == true ){
 
 			if(bUpToSpeed == true){
-				mFireSequence.execute(inputs, this);
+				dPWMMouthMotorPower = 0.0;
+				mFireSequence.execute(inputs, this); //  this refers to the shooter itself. 
 			} 
 
 		}
 
+		motPWMMouthMotor.set(dPWMMouthMotorPower);
 		bLastShooterLaunch = inputs.bShooterLaunch;
 
 	}
@@ -323,9 +326,9 @@ public class Shooter {
 		telem.addColumn("Sh CL Sen Vel");
 		telem.addColumn("Sh CL Target Vel");
 		telem.addColumn("Sh Turret State");
-		telem.addColumn("Sh RTF");	
-		telem.addColumn("Sh Up To Speed");
 		telem.addColumn("Sh Turret State");
+		telem.addColumn("Sh Up To Speed");
+		telem.addColumn("Sh Ball In Place");
 
 		mFireSequence.addTelemetryHeaders(telem);		// do these here as we have access to telem
 
@@ -336,19 +339,20 @@ public class Shooter {
 		telem.saveDouble("Sh CL PID I", dPid_Integral, 6 );  // need more decimals here, default = 2
 		telem.saveDouble("Sh CL PID D", dPid_Derivative, 6 );
 		telem.saveDouble("Sh CL PID F", dPid_FeedForward, 6 );
-		telem.saveDouble("Sh CL Error", motCANShooterMotor.getClosedLoopError() );
-		telem.saveDouble("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
-		if(bInClosedLoopMode) 	telem.saveDouble("Sh CL Target Vel", motCANShooterMotor.getClosedLoopTarget());
-		telem.saveTrueBoolean("Sh Up To Speed", this.bUpToSpeed);
+		if(bInClosedLoopMode){
+			telem.saveDouble("Sh CL Error", motCANShooterMotor.getClosedLoopError() );
+			telem.saveDouble("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
+			telem.saveDouble("Sh CL Target Vel", motCANShooterMotor.getClosedLoopTarget());
+		}
 		telem.saveString("Sh Turret State", sTurretState);
+		telem.saveTrueBoolean("Sh Up To Speed", this.bUpToSpeed);
+		telem.saveBoolean("Sh Ball In Place", bBallInPlace);
 
 		mFireSequence.writeTelemetryValues(telem);			// do these here as we have access to telem
     }
 	
 	public void outputToDashboard(final boolean b_MinDisplay)  {
 		
-
-
 		SmartDashboard.putNumber("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
 		if(bInClosedLoopMode) SmartDashboard.putNumber("Sh CL Target", motCANShooterMotor.getClosedLoopTarget() );
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
@@ -365,7 +369,10 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh CL Error", dCLError );
 		SmartDashboard.putNumber("Sh CL Req Pct", dRequestedPct);
 		SmartDashboard.putNumber("Sh Turret Pos", anaTurretPos.getAverageValue());
-		SmartDashboard.putNumber("Sh Height", anaShooterHeight.getAverageValue() );
+		SmartDashboard.putNumber("Sh Height Pos", anaShooterHeight.getAverageValue() );
+		SmartDashboard.putNumber("Sh Height Pow", dShooterHeightPower );
+		
+
 		
 		
 	}
@@ -402,10 +409,17 @@ class FireSequence{
 
 	void execute(Inputs inputs, Shooter shooter){
 
+		shooter.dPWMMouthMotorPower = 0.0;
+
 		if( iLastStep != iStep){
 			timStepTimer.reset();
 			bStepIsSetUp = false;			// used to set up contitiones within a step before it starts
 		}
+
+		shooter.motPWMMouthMotor.setSpeed(0.0);
+		SmartDashboard.putNumber("FS iStep", iStep);
+		SmartDashboard.putNumber("FS Timer", timStepTimer.get() );
+		SmartDashboard.putString("FS State", sState );
 
 		switch (iStep) {
 
@@ -427,10 +441,10 @@ class FireSequence{
 
 			case 2:
 				sState = "Get Ball";
-				shooter.motPWMMouthMotor.setSpeed(.75); // pull in the next ball
+				shooter.dPWMMouthMotorPower  = .40; // pull in the next ball
 
 				if(shooter.bBallInPlace == true){				// we see a ball
-					shooter.motPWMMouthMotor.setSpeed(0.0);	// stop pull
+					shooter.dPWMMouthMotorPower = 0.0;	// stop pull
 					iStep += 1;							
 				}
 
@@ -444,11 +458,11 @@ class FireSequence{
 					break;
 				}
 
-				shooter.motPWMMouthMotor.setSpeed(-.50);	// roll ball intake back at 1/2 speed
+				shooter.dPWMMouthMotorPower = -.40;	// roll ball intake back at 1/2 speed
 															// this will pull back the nexf ball if there is one. 
 
 				if( timStepTimer.get() > .15 && shooter.bBallInPlace == true  ){  	// do this for .15 seconds and ball in place
-					shooter.motPWMMouthMotor.setSpeed(0.0);						  	// times up, stop motor. 
+					shooter.dPWMMouthMotorPower = 0.0;						  	// times up, stop motor. 
 					iStep = 10;														// step 10
 				}
 
@@ -459,7 +473,7 @@ class FireSequence{
 				if(shooter.bBallInPlace == false){			// final check if we have a ball
 					iStep = 2;								// look for ball
 				} else {
-					iStep+=1;
+					iStep = 20;
 				}
 
 				break;

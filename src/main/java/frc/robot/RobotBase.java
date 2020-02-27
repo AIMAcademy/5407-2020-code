@@ -39,6 +39,8 @@ public class RobotBase {
 
 	boolean bDev_StopCompressor = false;
 	boolean bDev_StopDriveWheels = false;
+
+	boolean bInEndGameState = false;
   
 
     /**
@@ -56,8 +58,10 @@ public class RobotBase {
 		motRightDriveMotorB = new TalonFX(RobotMap.kCANId_LeftDriveMotorB);
 
 		motWinchLeftMotor = new CANSparkMax(RobotMap.kCANId_WinchLeftMotor,  CANSparkMaxLowLevel.MotorType.kBrushless );
+		motWinchLeftMotor.setInverted(false);
 		motWinchRightMotor = new CANSparkMax(RobotMap.kCANId_WinchRightMotor, CANSparkMaxLowLevel.MotorType.kBrushless);
-
+		motWinchRightMotor.setInverted(false);
+		
 		mCompressor = new Compressor( RobotMap.kCANId_PCM );
 		mCompressor.enabled();
 		mCompressor.setClosedLoopControl(true);
@@ -79,6 +83,9 @@ public class RobotBase {
 		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motIntake.set(0.0);
+
+		motWinchLeftMotor.set(0.0);
+		motWinchRightMotor.set(0.0);
 
 	}
 
@@ -125,6 +132,9 @@ public class RobotBase {
 		}
 
 		solShifter.set(inputs.bShiftBaseToHigh);
+
+		motWinchLeftMotor.set(inputs.dLeftWinchPower);
+		motWinchRightMotor.set(inputs.dRightWinchPower);
 
 		// Powering Intake Motors
 		if (inputs.bIntakeIn == true) {											// Forward
