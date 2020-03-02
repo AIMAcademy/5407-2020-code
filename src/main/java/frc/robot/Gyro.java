@@ -2,7 +2,6 @@ package frc.robot;
 
 import com.kauailabs.navx.frc.AHRS;
 
-import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.SPI;
@@ -10,39 +9,27 @@ import edu.wpi.first.wpilibj.SPI;
 
 public class Gyro {
 	// declare your variable up here
-    AHRS ahrs; 												//multi point sensor board
-	BuiltInAccelerometer bac_BuiltInAccel;
-	
-	double d_BACC_XAxis, d_BACC_YAxis, d_BACC_ZAxis;
+    AHRS ahrs = null; 												//multi point sensor board
 	
 	// Values returned by Navx-MXP
 	boolean b_isMoving, b_isRotating;
 	double d_navxAngle, d_navxPitch, d_navxRoll, d_navxYaw;
 	double d_navxDisplacementX, d_navxDisplacementY, d_navxDisplacementZ;
 	
-	// Values computed by Target class
-	boolean b_haveTarget;
-	double d_targetX;
-	double d_targetY;
 	
 	// class Constructor initialize you variables here
     public Gyro() {
 
-    	d_BACC_XAxis = 
-    	d_BACC_YAxis = 
-    	d_BACC_ZAxis = 0.0;
-    	
     	b_isMoving = 
     	b_isRotating = false;
-    	d_navxAngle =
+
+		d_navxAngle =
     	d_navxPitch =
     	d_navxRoll  =
     	d_navxYaw = 
     	d_navxDisplacementX =
     	d_navxDisplacementY =
     	d_navxDisplacementZ = 0.0;
-    	
-    	bac_BuiltInAccel = new BuiltInAccelerometer( );
     	
         try {
             /* Communicate w/navX MXP via the MXP SPI Bus.                                     */
@@ -59,24 +46,20 @@ public class Gyro {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {
     	
-		// Internal Accelerometer
-		d_BACC_XAxis = this.bac_BuiltInAccel.getX();
-		d_BACC_YAxis = this.bac_BuiltInAccel.getY();
-		d_BACC_ZAxis = this.bac_BuiltInAccel.getZ();
-
 		// navxMXP gyro, accelerometer, compass
-		if (ahrs.isConnected() && !ahrs.isCalibrating()) {
-			b_isMoving = ahrs.isMoving();
-			b_isRotating = ahrs.isRotating();
-			d_navxAngle = ahrs.getAngle();
-			d_navxPitch = ahrs.getPitch();
-			d_navxRoll = ahrs.getRoll();
-			d_navxYaw = ahrs.getYaw();
-			d_navxDisplacementX = ahrs.getDisplacementX();
-			d_navxDisplacementY = ahrs.getDisplacementY();
-			d_navxDisplacementZ = ahrs.getDisplacementZ();
+		if(ahrs != null){
+			if (ahrs.isConnected() && !ahrs.isCalibrating()) {
+				b_isMoving = ahrs.isMoving();
+				b_isRotating = ahrs.isRotating();
+				d_navxAngle = ahrs.getAngle();
+				d_navxPitch = ahrs.getPitch();
+				d_navxRoll = ahrs.getRoll();
+				d_navxYaw = ahrs.getYaw();
+				d_navxDisplacementX = ahrs.getDisplacementX();
+				d_navxDisplacementY = ahrs.getDisplacementY();
+				d_navxDisplacementZ = ahrs.getDisplacementZ();
+			}
 		}
-
 	}
 
 	/**
@@ -97,7 +80,7 @@ public class Gyro {
 
 	public double getGyroRelativeBearing() {
 
-		double d_CurrYaw = this.ahrs.getAngle(); // you have to read the pitch from the gyro
+		double d_CurrYaw = this.ahrs.getAngle(); // you have to read the angle from the gyro
 
 		if (d_CurrYaw <= 180.0) // return positive if < 180
 			return d_CurrYaw;
@@ -126,8 +109,8 @@ public class Gyro {
 	}
 
 	public void addTelemetryHeaders(LCTelemetry telem) {
-		telem.addColumn("S AHRS Pitch");
-		telem.addColumn("S Bearing");
+		telem.addColumn("G Bearing");
+
 	}
 
 	public void writeTelemetryValues(LCTelemetry telem) {
@@ -136,11 +119,15 @@ public class Gyro {
 
 	// Show what variables we want to the SmartDashboard
 	public void outputToDashboard(boolean b_MinDisplay) {
+		SmartDashboard.putNumber("G Bearing", this.getGyroRelativeBearing());
 
-		if (b_MinDisplay == false) {
-		}
+		if (b_MinDisplay == true) return;
+
+
 		SmartDashboard.putNumber("G Bearing", getGyroRelativeBearing());
-
+		SmartDashboard.putBoolean("G Moving", b_isMoving);
+		SmartDashboard.putNumber("G NAVX Angle", d_navxAngle);
+		
 	}
 	
 	// Load config file

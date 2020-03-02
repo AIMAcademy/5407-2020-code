@@ -40,12 +40,17 @@ public class Inputs {
 	public double dRequestedVelocity = 0.0;
 	
 	public boolean bShooterLaunch = false;
+	public boolean bTargetting = false;
 
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
 
+	public boolean bRunwayIn = false;
+	public boolean bRunwayOut = false;
+
 	public boolean bMouthIn = false; 
 	public boolean bMouthOut = false;
+	public boolean bLoadABall = false;
 
 	public boolean bTeainatorUp = false;
 	public boolean bTeainatorDown = false;
@@ -53,16 +58,19 @@ public class Inputs {
 	//public boolean bUpdateShooterPID = false;
 	public boolean bShiftBaseToHigh = false;
 
-	public boolean bShooterHeightRaise = false;
-	public boolean bShooterHeightLower = false;
+	public double dShooterHoodPower = 0.0;
 
-	private boolean bUseTestController = false;
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
 	public boolean bShooterVelocitySaveSetting = false;
 
 	public boolean bInEndGame  = false;
-	double dMaxWinchPower = .65; 
+	double dMaxWinchPower = .65;
+	double dTurretPOV = 0.0; 
+	int iTurretRequestedToPosition = 0;
+	int iHoodRequestedToPosition = 0;
+	double dRequestedBearing = 0.0;
+	
 
 	// class Constructor initialize your variables here
     public Inputs() {
@@ -117,6 +125,10 @@ public class Inputs {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
 
+		iTurretRequestedToPosition = -1;    // force to -1 to indicate no requests.
+		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
+		dRequestedBearing = -1.0;
+
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;
 		}
@@ -145,6 +157,8 @@ public class Inputs {
 		temp  = gamepadOperator.getY(Hand.kRight) ;	    		// we cook this down as full is too fast
 		dRightWinchPower = temp * Math.abs(temp * temp * temp);  // set these now, adjust when we determine end game
 
+		dTurretPOV = gamepadDriver.getPOV();
+
 		if(gamepadOperator.getPOV() == 0){
 			dRightWinchPower = dMaxWinchPower;
 			dLeftWinchPower = dMaxWinchPower;
@@ -163,13 +177,16 @@ public class Inputs {
 		}else {
 			dRequestedVelocity = 6000 + temp * 100;			// raise in 100 ticks increments
 		}
-		
+		//dRequestedVelocity = 0.0;
+
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
 
 		bMouthIn = false; 
 		bMouthOut = false; 
 
-										
+		/**
+		 * Teainator in/out  processing
+		 **/				
 		bIntakeIn = false;
 		bIntakeOut = false;
 									
@@ -185,6 +202,9 @@ public class Inputs {
 		}
 
 
+		/**
+		 * Teainator up/down  processing
+		 **/				
 		bTeainatorDown = false;
 		bTeainatorUp = false;
 
@@ -200,18 +220,8 @@ public class Inputs {
 	
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
-		bShooterHeightRaise = false;
-		bShooterHeightLower = false;
-		temp = gamepadOperator.getY(Hand.kRight);
-		if (Math.abs(temp) > .5){ 								// dead zone
-
-			if(temp > 0.0){
-				bShooterHeightRaise = true;
-			} else if( temp < 0.0){
-				bShooterHeightLower = true;
-			}
-
-		}
+		// get axis and then it will be process in the shooter 
+		dShooterHoodPower = -gamepadOperator.getY(Hand.kRight); // Invert so 1 is up and -1 is down.
 
 		// the end game is when we are ready to hang. Slower movements are better
 		if( bInEndGame == false){
@@ -223,8 +233,8 @@ public class Inputs {
 			dDriverPower *= .3;			// allow only small movements
 			dDriverTurn *= .3;
 			dTurretPower = 0.0;			// not allowed in end game mode
-			bShooterHeightRaise = false;
-			bShooterHeightLower = false;
+			//bShooterHeightP = false;
+			//bShooterHeightLower = false;
 		}
 
 
@@ -234,6 +244,12 @@ public class Inputs {
 		
 		//bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
 		//bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
+
+		if (gamepadOperator.getTriggerAxis(Hand.kLeft) > 0.7){		// Prevent accidental presses
+			bTargetting = true;
+		} else {
+			bTargetting = false;
+		}
 
 		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
 			bShooterLaunch = true;
@@ -298,7 +314,13 @@ public class Inputs {
 		SmartDashboard.putNumber("I_TestValue",dTestValue);
 		SmartDashboard.putBoolean("I In End Game",bInEndGame);
 		SmartDashboard.putBoolean("I Sh Launch",bShooterLaunch);	
+		SmartDashboard.putBoolean("I Sh Intake",bIntakeIn);	
+		SmartDashboard.putNumber("I Turr POV",dTurretPOV);
+		SmartDashboard.putNumber("I Turr Req Pos", iTurretRequestedToPosition);
+		SmartDashboard.putNumber("I Hood Req Pos",iHoodRequestedToPosition);
+		SmartDashboard.putNumber("I Hood Req Pow",dShooterHoodPower);
 
+		
 		
 		if ( b_MinDisplay == false ){
 		}

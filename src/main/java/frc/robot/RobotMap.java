@@ -35,7 +35,7 @@ class RobotMap {
    // Analog Inputs
 
    //public final static int kAnalogPort_ = 0;
-   public final static int kAnalogPort_ShooterHeight = 0;
+   public final static int kAnalogPort_ShooterHood = 0;
    public final static int kAnalogPort_TurretPos = 1;
 
    // PWM Ports
@@ -44,11 +44,11 @@ class RobotMap {
    public final static int kPWMPort_Mouth = 1;
    // what is in 2????
    public final static int kPWMPort_RunwayMotor = 3;
-   public final static int kPWMPort_ShooterHeight = 5;
+   public final static int kPWMPort_ShooterHoodMotor = 5;
 
    // Input Bottons
-   public final static int kButton_ShooterHeightRaise = 4;
-   public final static int kButton_ShooterHeightLower = 6;
+   public final static int kButton_ShooterHoodRaise = 4;
+   public final static int kButton_ShooterHoodLower = 6;
 
    public final static int kButton_ShooterVelocity_Raise = 8;
    public final static int kButton_ShooterVelocity_Lower = 9;

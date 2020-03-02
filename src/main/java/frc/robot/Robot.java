@@ -25,7 +25,7 @@ public class Robot extends TimedRobot {
 	RobotBase robotbase = null;
 	LCTelemetry telem = null;
   Config config = null;
-  
+  Limelight limelight = null;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -40,6 +40,7 @@ public class Robot extends TimedRobot {
     inputs    = new Inputs();			
     shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
     robotbase = new RobotBase(config);
+    limelight = new Limelight("limelight");
    
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
@@ -125,7 +126,9 @@ public class Robot extends TimedRobot {
     robotbase.loadConfig();
     robotbase.SetDevModes();
     shooter.loadConfig(config);
-}
+    System.out.println("***** Teleop Init complete ********");
+  
+  }
 
   /**
    * This function is called periodically during operator control.
@@ -133,16 +136,18 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     inputs.readValues();
+    limelight.update(inputs);
     shooter.update(inputs,config);
     robotbase.update(inputs);
     
     inputs.outputToDashboard(false);
+    limelight.outputToDashboard(false);
     shooter.outputToDashboard(false);
     robotbase.outputToDashboard(false);
     
     inputs.writeTelemetryValues(telem);				// order does not matter
-    shooter.writeTelemetryValues(telem);
-    robotbase.writeTelemetryValues(telem);
+    shooter.writeTelemetryValues(telem, inputs);
+    robotbase.writeTelemetryValues(telem, inputs);
     
     telem.writeRow();					
   }

@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
 //import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.revrobotics.CANSparkMax;
@@ -22,8 +23,13 @@ public class RobotBase {
 	TalonFX motLeftDriveMotorB  = null;
 	TalonFX motRightDriveMotorA = null;
 	TalonFX motRightDriveMotorB = null;
+
 	Spark motIntake = null;
+	double dIntakePower = 0.0;
+
 	Spark motRunway = null;
+	double dRunwayPower = 0.0;
+
 	CANSparkMax motWinchLeftMotor = null;
 	CANSparkMax motWinchRightMotor = null;
 
@@ -41,6 +47,10 @@ public class RobotBase {
 	boolean bDev_StopDriveWheels = false;
 
 	boolean bInEndGameState = false;
+	
+	public Gyro gyro = null;
+	double dRelativeGyroBearing = 0.0;
+	double dAnglePorportion = -0.01;
   
 
     /**
@@ -57,11 +67,27 @@ public class RobotBase {
 		motRightDriveMotorA = new TalonFX(RobotMap.kCANId_LeftDriveMotorA);
 		motRightDriveMotorB = new TalonFX(RobotMap.kCANId_LeftDriveMotorB);
 
+		// Make sure motors are in break mode
+		motLeftDriveMotorA.setNeutralMode(NeutralMode.Brake);
+		motLeftDriveMotorB.setNeutralMode(NeutralMode.Brake);
+		motRightDriveMotorA.setNeutralMode(NeutralMode.Brake);
+		motRightDriveMotorB.setNeutralMode(NeutralMode.Brake);
+		
+		// Make sure motors are stopped
+		motLeftDriveMotorA.set(ControlMode.PercentOutput, 0.0);
+		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
+		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
+		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
+
 		motWinchLeftMotor = new CANSparkMax(RobotMap.kCANId_WinchLeftMotor,  CANSparkMaxLowLevel.MotorType.kBrushless );
 		motWinchLeftMotor.setInverted(false);
 		motWinchRightMotor = new CANSparkMax(RobotMap.kCANId_WinchRightMotor, CANSparkMaxLowLevel.MotorType.kBrushless);
 		motWinchRightMotor.setInverted(false);
-		
+
+		motWinchLeftMotor.set(0.0);
+		motWinchRightMotor.set(0.0);
+
+
 		mCompressor = new Compressor( RobotMap.kCANId_PCM );
 		mCompressor.enabled();
 		mCompressor.setClosedLoopControl(true);
@@ -72,20 +98,14 @@ public class RobotBase {
 		solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
 		solTeainator = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_Teainator);
 
-
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
-		motRunway = new Spark(RobotMap.kPWMPort_RunwayMotor);
-		motRunway.setInverted(true);
-
-		// Make sure motors are stopped
-		motLeftDriveMotorA.set(ControlMode.PercentOutput, 0.0);
-		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
-		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
-		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motIntake.set(0.0);
 
-		motWinchLeftMotor.set(0.0);
-		motWinchRightMotor.set(0.0);
+		motRunway = new Spark(RobotMap.kPWMPort_RunwayMotor);
+		motRunway.setInverted(true);
+		motRunway.set(0.0);
+
+		gyro = new Gyro();
 
 	}
 
@@ -106,6 +126,22 @@ public class RobotBase {
 			sCompressorCLState = "Normal";
 		}
 	}
+
+	public void GyroToAngle(Inputs inputs, Gyro gyro){
+		double dRelativeGyroBearing = gyro.getGyroRelativeBearing();
+
+		if( inputs.dRequestedBearing > -1.0 ){
+
+			if( inputs.dRequestedBearing == 270.0 ){
+				inputs.dRequestedBearing = -90.0;
+			}
+
+			double dDiff = dRelativeGyroBearing - inputs.dRequestedBearing;
+			inputs.dDriverTurn = dDiff * dAnglePorportion;	// turn porportionally
+		}
+	}
+
+
     /**
      * This function is run to update the output objects with data. 
      */
@@ -120,6 +156,11 @@ public class RobotBase {
 		// ApplyPower has a way to figure out what to send the motors Arcade Power  
 		// The same power is applyed to the 2 left motors and anothe calculation is for the rigth motors. 
 		// For arcade we only pass power and turn.
+
+
+		dRelativeGyroBearing = gyro.getGyroRelativeBearing();
+
+		GyroToAngle(inputs, gyro);
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
 			dLeftDrivePower  = applyPower.getWheelPower(ApplyPower.k_iLeftRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
@@ -136,19 +177,25 @@ public class RobotBase {
 		motWinchLeftMotor.set(inputs.dLeftWinchPower);
 		motWinchRightMotor.set(inputs.dRightWinchPower);
 
-		// Powering Intake Motors
+		dIntakePower = 0.0;							// set to default
+		dRunwayPower = 0.0;
+
+		// Powering Intake/Runway Motors			// apply the filtering
 		if (inputs.bIntakeIn == true) {											// Forward
-			motIntake.set(.5);
-			motRunway.set(.5);		
+			dIntakePower = .5;
+			dRunwayPower = .5;
+		} else if (inputs.bIntakeOut == true) { 									// Backwards
+			dIntakePower = -.5;
+			dRunwayPower = -.5;		
+		} else if (inputs.bRunwayIn == true) { 					
+			dRunwayPower =  .5;		
+		} else if (inputs.bRunwayOut == true) { 				
+			dRunwayPower = -.5;		
 		}
-		else if (inputs.bIntakeOut == true) { 									// Backwards
-			motIntake.set(-.5);	
-			motRunway.set(-.5);		
-		}
-		else {
-			motIntake.set(0.0);
-			motRunway.set(0.0);		
-		}
+
+		motIntake.set(dIntakePower);				// assign the resulting power settings 
+		motRunway.set(dRunwayPower);		
+
 
 		//Setting Intake Soloniod to true/false
 		if( inputs.bTeainatorDown == true)
@@ -171,32 +218,60 @@ public class RobotBase {
 
 	}
     public void addTelemetryHeaders(LCTelemetry telem ){
+		telem.addColumn("Dev Stop Compressor");
+		telem.addColumn("Dev Stop Drive Wheels");
+
+		telem.addColumn("IN Driver Power"); 
+		telem.addColumn("IN Driver Turn"); 
 		telem.addColumn("RB Left Drive Motor A"); 
 		telem.addColumn("RB Left Drive Motor B"); 
 		telem.addColumn("RB Rite Drive Motor A"); 
 		telem.addColumn("RB Rite Drive Motor B");
-		telem.addColumn("RB Intake Motor");
+
+		telem.addColumn("RB Compres Current");
+		telem.addColumn("RB Compres CL State");
+
+		telem.addColumn("IN Tea In");
+		telem.addColumn("IN Tea Out");
+		telem.addColumn("RB Tea Motor Power");
 		telem.addColumn("RB Tea Status");
-		telem.addColumn("RB Comp CL State");
+
+		gyro.addTelemetryHeaders(telem);
 
     }
 
-    public void writeTelemetryValues(LCTelemetry telem ){
+    public void writeTelemetryValues(LCTelemetry telem, Inputs inputs ){
+
+		telem.saveDouble("IN Driver Power", inputs.dDriverPower); 
+		telem.saveDouble("IN Driver Turn", inputs.dDriverTurn); 
 		telem.saveDouble("RB Left Drive Motor A", this.motLeftDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Left Drive Motor B", this.motLeftDriveMotorB.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor A", this.motRightDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor B", this.motRightDriveMotorB.getMotorOutputPercent());
-		telem.saveDouble("RB Intake Motor", this.motIntake.getSpeed());
+
+		telem.saveDouble("RB Compres Current", this.mCompressor.getCompressorCurrent(),2);
+		telem.saveString("RB Compres CL State", sCompressorCLState);
+
+		telem.saveTrueBoolean("Dev Stop Compressor", bDev_StopCompressor);
+		telem.saveTrueBoolean("Dev Stop Drive Wheels", bDev_StopDriveWheels);
+
+		telem.saveTrueBoolean("IN Tea In", inputs.bIntakeIn);
+		telem.saveTrueBoolean("IN Tea Out", inputs.bIntakeOut);
+		telem.saveDouble("RB Tea Motor Power", this.motIntake.getSpeed());
 		telem.saveTrueBoolean("RB Tea State", bTeainatorState);
-		telem.saveString("RB Comp CL State", sCompressorCLState);
-    }
+
+		gyro.writeTelemetryValues(telem);
+
+	}
 
     
 	// Show what variables we want to the SmartDashboard
 	public void outputToDashboard(boolean b_MinDisplay)  {
 
-		SmartDashboard.putNumber("O_<<<Motors", dLeftDrivePower);
-		SmartDashboard.putNumber("O_>>>Motors", dRightDrivePower);
+		gyro.outputToDashboard(b_MinDisplay);
+
+		SmartDashboard.putNumber("RB <<<Motors", dLeftDrivePower);
+		SmartDashboard.putNumber("RB >>>Motors", dRightDrivePower);
 
 		if( b_MinDisplay == true ) return;
 

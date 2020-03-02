@@ -6,9 +6,11 @@
 /*----------------------------------------------------------------------------*/
 
 package frc.robot;
-
+import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 
 /**
  * Wrapper class for getting and setting Limelight NetworkTable values.
@@ -21,6 +23,22 @@ public class Limelight {
 	private NetworkTableInstance table = null;
 	private String hostName;
 
+	//NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+	//NetworkTableEntry tx = table.getEntry("tx");
+	//NetworkTableEntry ty = table.getEntry("ty");
+	//NetworkTableEntry ta = table.getEntry("ta");
+	  
+
+	public void update(Inputs inputs){
+
+		if(inputs.bTargetting == true || inputs.bShooterLaunch == true){
+			setLedMode(LightMode.eOn);
+		}else{
+			setLedMode(LightMode.eOff);
+		}
+
+	}
+  
 	public Limelight(String hostName) {
 		this.hostName = hostName;
 	}
@@ -42,6 +60,7 @@ public class Limelight {
 	public enum CameraMode {
 		eVision, eDriver
 	}
+
 
 	/**
 	 * Gets whether a target is detected by the Limelight.
@@ -161,5 +180,30 @@ public class Limelight {
 		}
 
         return table.getTable(hostName).getEntry(key);
+	}
+
+	public void outputToDashboard(final boolean b_MinDisplay)  {
+		
+		//SmartDashboard.putBoolean("LL isTarget", isTarget() );
+		SmartDashboard.putNumber("LL dXCoord", getTx() );
+		SmartDashboard.putNumber("LL dYCoord", getTy() );
+		SmartDashboard.putNumber("LL dArea", getTa() );
+		SmartDashboard.putBoolean("LL IsTarget", isTarget() );
+
+	}
+
+	public void addTelemetryHeaders(final LCTelemetry telem ){
+		telem.addColumn("LL TX");
+		telem.addColumn("LL TY");
+		telem.addColumn("LL TA");
+		telem.addColumn("LL Is Target");
+
+	}
+
+	public void writeTelemetryValues(final LCTelemetry telem ){
+		telem.saveDouble("LL TX", getTx() ); 
+		telem.saveDouble("LL TY", getTy() ); 
+		telem.saveDouble("LL TA", getTa() ); 
+		telem.saveTrueBoolean("LL Is Target", isTarget() ); 
 	}
 }
