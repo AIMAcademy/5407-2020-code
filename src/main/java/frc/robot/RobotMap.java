@@ -17,8 +17,8 @@ class RobotMap {
     public final static int kCANId_RightDriveMotorB = 2;
     public final static int kCANId_LeftDriveMotorA = 3;
     public final static int kCANId_LeftDriveMotorB = 4;
-    public final static int kCANId_ShooterMotor = 5;
-    public final static int kCANId_ShooterTurretMotor = 6;
+    public final static int kCANId_ShooterMotorRight = 5;
+    public final static int kCANId_ShooterMotorLeft = 6;
     public final static int kCANId_WinchLeftMotor = 8;
     public final static int kCANId_WinchRightMotor = 7;
 
