@@ -27,9 +27,7 @@ public class RobotBase {
 	Spark motIntake = null;
 	double dIntakePower = 0.0;
 
-	Spark motRunway = null;
-	double dRunwayPower = 0.0;
-
+	
 	CANSparkMax motWinchLeftMotor = null;
 	CANSparkMax motWinchRightMotor = null;
 
@@ -51,7 +49,9 @@ public class RobotBase {
 	public Gyro gyro = null;
 	double dRelativeGyroBearing = 0.0;
 	double dAnglePorportion = -0.01;
-  
+	boolean bIsOnGyroBearing = false;
+
+	
 
     /**
      * This function is run when this class is first created used for any initialization code.
@@ -101,9 +101,7 @@ public class RobotBase {
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
 		motIntake.set(0.0);
 
-		motRunway = new Spark(RobotMap.kPWMPort_RunwayMotor);
-		motRunway.setInverted(true);
-		motRunway.set(0.0);
+	
 
 		gyro = new Gyro();
 
@@ -127,17 +125,39 @@ public class RobotBase {
 		}
 	}
 
+
+
+
+
 	public void GyroToAngle(Inputs inputs, Gyro gyro){
 		double dRelativeGyroBearing = gyro.getGyroRelativeBearing();
+		double dDiff = dRelativeGyroBearing - inputs.dRequestedBearing;
 
-		if( inputs.dRequestedBearing > -1.0 ){
+		SmartDashboard.putNumber("RB Gyro Rel Bear",  dRelativeGyroBearing);
+		SmartDashboard.putNumber("RB Bearing dDiff", dDiff);
+		SmartDashboard.putNumber("RB Req Bearing", inputs.dRequestedBearing);
+
+		if( Math.abs(dDiff) < 3.0){
+			bIsOnGyroBearing = true;
+		} else {
+			bIsOnGyroBearing = false;
+		}
+
+		
+		if( inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true ){
 
 			if( inputs.dRequestedBearing == 270.0 ){
 				inputs.dRequestedBearing = -90.0;
 			}
 
-			double dDiff = dRelativeGyroBearing - inputs.dRequestedBearing;
+			double dMax = .3;
 			inputs.dDriverTurn = dDiff * dAnglePorportion;	// turn porportionally
+			if(inputs.dDriverTurn > dMax ){
+				inputs.dDriverTurn = Math.max(inputs.dDriverTurn, dMax); 
+			} else if(inputs.dDriverTurn < -dMax){
+				inputs.dDriverTurn = Math.min(inputs.dDriverTurn, -dMax); 
+			}
+
 		}
 	}
 
@@ -177,25 +197,17 @@ public class RobotBase {
 		motWinchLeftMotor.set(inputs.dLeftWinchPower);
 		motWinchRightMotor.set(inputs.dRightWinchPower);
 
+		// process the intake motors
 		dIntakePower = 0.0;							// set to default
-		dRunwayPower = 0.0;
 
 		// Powering Intake/Runway Motors			// apply the filtering
 		if (inputs.bIntakeIn == true) {											// Forward
 			dIntakePower = .5;
-			dRunwayPower = .5;
 		} else if (inputs.bIntakeOut == true) { 									// Backwards
 			dIntakePower = -.5;
-			dRunwayPower = -.5;		
-		} else if (inputs.bRunwayIn == true) { 					
-			dRunwayPower =  .5;		
-		} else if (inputs.bRunwayOut == true) { 				
-			dRunwayPower = -.5;		
 		}
 
 		motIntake.set(dIntakePower);				// assign the resulting power settings 
-		motRunway.set(dRunwayPower);		
-
 
 		//Setting Intake Soloniod to true/false
 		if( inputs.bTeainatorDown == true)
@@ -272,6 +284,9 @@ public class RobotBase {
 
 		SmartDashboard.putNumber("RB <<<Motors", dLeftDrivePower);
 		SmartDashboard.putNumber("RB >>>Motors", dRightDrivePower);
+		SmartDashboard.putBoolean("RB Gyro On Bearing", bIsOnGyroBearing);
+
+
 
 		if( b_MinDisplay == true ) return;
 

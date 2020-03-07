@@ -41,6 +41,7 @@ public class Limelight {
   
 	public Limelight(String hostName) {
 		this.hostName = hostName;
+		setCameraMode(CameraMode.eVision);
 	}
 
 	/**

@@ -1,0 +1,26 @@
+auton 1
+
+    step 1 
+        Turnto , -90    , Turn to 90 degrees left
+
+    step 2
+        Bearing , -90    , keep on 90 degrees left
+        Timer   , .75,  tttt  
+        Power   ,   -.30, tttt 
+	
+    step 3
+	settle , .50   ,  stop for .5 sec
+
+    step 4 
+        Bearing , -90    , keeep at 90
+        Timer   , .75,  tttt  
+        Power   ,   .30, tttt 
+
+    step 5
+	settle , .50   ,  stop for .5 sec
+
+    step 6 
+        Turnto , 0    , Turn to score area
+
+
+

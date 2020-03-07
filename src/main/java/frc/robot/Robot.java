@@ -26,6 +26,7 @@ public class Robot extends TimedRobot {
 	LCTelemetry telem = null;
   Config config = null;
   Limelight limelight = null;
+  ScriptedAuton scriptedauton = null;  
 
   /**
    * This function is run when the robot is first started up and should be
@@ -41,6 +42,7 @@ public class Robot extends TimedRobot {
     shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
     robotbase = new RobotBase(config);
     limelight = new Limelight("limelight");
+    scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt");   
    
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
@@ -74,8 +76,13 @@ public class Robot extends TimedRobot {
 
   @Override
     public void disabledPeriodic() {
-
-
+      inputs.readValues();
+      inputs.outputToDashboard(false);
+      limelight.outputToDashboard(false);
+      shooter.outputToDashboard(false);
+      robotbase.outputToDashboard(false);
+      scriptedauton.outputToDashboard(false);
+  
     }
 
 
@@ -103,17 +110,9 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousPeriodic() {
-    /***
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
-    ***/
+
+    scriptedauton.execute( 1, inputs, robotbase);
+
   }
 
   /**
@@ -124,8 +123,14 @@ public class Robot extends TimedRobot {
     config.load();              // durign testing reload the config file to be sure we got updates
     //shooter.reloadTables();
     robotbase.loadConfig();
+    robotbase.gyro.zeroGyroBearing();
     robotbase.SetDevModes();
     shooter.loadConfig(config);
+    scriptedauton.reset();
+    //limelight.setCameraMode(CameraMode.eDriver);
+    //limelight.setLedMode(LightMode.eOff);
+    
+    
     System.out.println("***** Teleop Init complete ********");
   
   }
@@ -136,6 +141,11 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     inputs.readValues();
+
+    if( inputs.bRunAuton == true){
+      scriptedauton.execute( 1, inputs, robotbase);
+    }
+
     limelight.update(inputs);
     shooter.update(inputs,config);
     robotbase.update(inputs);
@@ -144,6 +154,7 @@ public class Robot extends TimedRobot {
     limelight.outputToDashboard(false);
     shooter.outputToDashboard(false);
     robotbase.outputToDashboard(false);
+    scriptedauton.outputToDashboard(false);
     
     inputs.writeTelemetryValues(telem);				// order does not matter
     shooter.writeTelemetryValues(telem, inputs);

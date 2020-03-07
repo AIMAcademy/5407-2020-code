@@ -21,7 +21,8 @@ public class Shooter {
 	// create your variables
 
 	ShooterVelocity shootvel = null;
-	TalonFX  motCANShooterMotor = null;
+	TalonFX  motCANShooterMotorLeft = null;
+	TalonFX  motCANShooterMotorRight = null;
 
 	//  PID Closed Loop Settings for shooter
 	static final int kSlotIdx = 0;  		// PID Slot 0 or 1 
@@ -48,7 +49,7 @@ public class Shooter {
 	private HttpCamera limelightFeed;
 	
 
-	TalonSRX motCANTurretMotor = null;
+	//TalonSRX motCANTurretMotor = null;
 	AnalogInput anaTurretPos  = null;
 	int iTurretLeftStop = 300;		// check config file
 	int iTurretRigthStop = 3400;	// check config file
@@ -107,21 +108,34 @@ public class Shooter {
 		solBallPusherUpper = new Solenoid(RobotMap.kPCMPort_BallPusherUpper);
 		solBallPusherUpper.set(false);
 
-		motCANShooterMotor = new TalonFX(RobotMap.kCANId_ShooterMotor);
-		motCANShooterMotor.configFactoryDefault();
+		motCANShooterMotorRight = new TalonFX(RobotMap.kCANId_ShooterMotorRight);
+		motCANShooterMotorRight.configFactoryDefault();
 		/* Config sensor used for Primary PID [Velocity] */
-		motCANShooterMotor.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, kTimeoutMs);
-		motCANShooterMotor.setSensorPhase(true);
-		motCANShooterMotor.configClosedloopRamp(3);  	// ramp up time so we do not cause a huge surge in current 
-		motCANShooterMotor.configNominalOutputForward(0, kTimeoutMs);
-		motCANShooterMotor.configNominalOutputReverse(0, kTimeoutMs);
-		motCANShooterMotor.set(ControlMode.Velocity, 0.0);
-		motCANShooterMotor.configPeakOutputForward(1.0, kTimeoutMs);
-		motCANShooterMotor.configPeakOutputReverse(-1.0, kTimeoutMs);
-		motCANShooterMotor.set(ControlMode.Velocity, 0.0);
-	
-		motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
-		motCANTurretMotor.setInverted(false); // invert direction to match gearing
+		motCANShooterMotorRight.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, kTimeoutMs);
+		motCANShooterMotorRight.setSensorPhase(true);
+		motCANShooterMotorRight.configClosedloopRamp(0);  	// ramp up time so we do not cause a huge surge in current 
+		motCANShooterMotorRight.configNominalOutputForward(0, kTimeoutMs);
+		motCANShooterMotorRight.configNominalOutputReverse(0, kTimeoutMs);
+		motCANShooterMotorRight.configPeakOutputForward(1.0, kTimeoutMs);
+		motCANShooterMotorRight.configPeakOutputReverse(-1.0, kTimeoutMs);
+		motCANShooterMotorRight.set(ControlMode.Velocity, 0.0);
+
+		motCANShooterMotorLeft = new TalonFX(RobotMap.kCANId_ShooterMotorLeft);
+		motCANShooterMotorLeft.configFactoryDefault();
+		/* Config sensor used for Primary PID [Velocity] */
+		//motCANShooterMotorLeft.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, kTimeoutMs);
+		//motCANShooterMotorLeft.setSensorPhase(true);
+		//motCANShooterMotorLeft.configClosedloopRamp(0);  	// ramp up time so we do not cause a huge surge in current 
+		//motCANShooterMotorLeft.configNominalOutputForward(0, kTimeoutMs);
+		//motCANShooterMotorLeft.configNominalOutputReverse(0, kTimeoutMs);
+		//motCANShooterMotorLeft.set(ControlMode.Velocity, 0.0);
+		//motCANShooterMotorLeft.configPeakOutputForward(1.0, kTimeoutMs);
+		//motCANShooterMotorLeft.configPeakOutputReverse(-1.0, kTimeoutMs);
+		motCANShooterMotorLeft.set(ControlMode.PercentOutput, 0.0);
+
+
+		//motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
+		//motCANTurretMotor.setInverted(false); // invert direction to match gearing
 
 		motShooterHood = new Servo(RobotMap.kPWMPort_ShooterHoodMotor);
 		anaShooterHood = new AnalogInput(RobotMap.kAnalogPort_ShooterHood);
@@ -146,14 +160,14 @@ public class Shooter {
 		dPWMMouthMotorPower = 0.0;									// kill this an below it will be reset
 		this.updateShooterVelocity(inputs);							// spinn the shootr wheel
 		// read the sensors so we all have them now
-		iTurretPosition = anaTurretPos.getAverageValue(); 
+		//iTurretPosition = anaTurretPos.getAverageValue(); 
 		iShooterHoodPosition = anaShooterHood.getAverageValue();
 
 		if(inputs.bTargetting == true){
 			this.Targetting(inputs);
 		}
 
-		TurretPosition(inputs);
+		//TurretPosition(inputs);
 		HoodPosition(inputs);
 
 		if (digBallInPlace.get() == false) {		//Device is set for normally closed
@@ -178,8 +192,8 @@ public class Shooter {
 			fireseq.execute(inputs); //  this refers to the shooter itself. 
 		}
 
-		motPWMMouthMotor.set(dPWMMouthMotorPower);
-		SmartDashboard.putNumber("Sh Mouth Power", dPWMMouthMotorPower);
+		//motPWMMouthMotor.set(dPWMMouthMotorPower);
+		//SmartDashboard.putNumber("Sh Mouth Power", dPWMMouthMotorPower);
 		bLastShooterLaunch = inputs.bShooterLaunch;
 
 	}
@@ -217,15 +231,15 @@ public class Shooter {
 
 	public void updateShooterSettings() {
 		/* Config the Velocity closed loop gains in slot0 */
-		motCANShooterMotor.config_kP(kPIDLoopIdx, dPid_Proportional, kTimeoutMs);
-		motCANShooterMotor.config_kI(kPIDLoopIdx, dPid_Integral, kTimeoutMs);
-		motCANShooterMotor.config_kD(kPIDLoopIdx, dPid_Derivative, kTimeoutMs);
-		motCANShooterMotor.config_kF(kPIDLoopIdx, dPid_FeedForward, kTimeoutMs);
-		motCANShooterMotor.config_IntegralZone(kPIDLoopIdx, iPid_IntegralZone);
+		motCANShooterMotorRight.config_kP(kPIDLoopIdx, dPid_Proportional, kTimeoutMs);
+		motCANShooterMotorRight.config_kI(kPIDLoopIdx, dPid_Integral, kTimeoutMs);
+		motCANShooterMotorRight.config_kD(kPIDLoopIdx, dPid_Derivative, kTimeoutMs);
+		motCANShooterMotorRight.config_kF(kPIDLoopIdx, dPid_FeedForward, kTimeoutMs);
+		motCANShooterMotorRight.config_IntegralZone(kPIDLoopIdx, iPid_IntegralZone);
 	}
 
 	public void updateShooterVelocity(final Inputs inputs) {
-		dCLError = motCANShooterMotor.getClosedLoopError();
+		dCLError = motCANShooterMotorRight.getClosedLoopError();
 
 		dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;
 
@@ -235,13 +249,16 @@ public class Shooter {
 		if( inputs.dRequestedVelocity  < 8000) {
 			bInClosedLoopMode = false;
 			sCLStatus = "PCTMode";
-			motCANShooterMotor.set(ControlMode.PercentOutput, dRequestedPct);
+			motCANShooterMotorRight.set(ControlMode.PercentOutput, dRequestedPct);
 		} else { 
 
 			bInClosedLoopMode = true;
 
 			if(inputs.dRequestedVelocity != dLastRequestedVelocity){
-				motCANShooterMotor.set(ControlMode.Velocity, inputs.dRequestedVelocity);
+				motCANShooterMotorRight.set(ControlMode.Velocity, inputs.dRequestedVelocity);
+				double dRightPCT = motCANShooterMotorRight.getMotorOutputPercent();
+				motCANShooterMotorLeft.set(ControlMode.PercentOutput, -dRightPCT);
+
 				updateShooterSettings();
 			}
 			else {
@@ -375,9 +392,6 @@ public class Shooter {
 				inputs.iTurretRequestedToPosition = 2190;
 			}
 
-		/**
-		 * turret position processing
-		 **/
 
 			iDiff = -1;
 			// negative power is left, positive power is right
@@ -428,7 +442,7 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh Turret Req Pow", inputs.dTurretPower);
 
 		//inputs.dTurretPower = 0.0;
-		motCANTurretMotor.set(ControlMode.PercentOutput, -inputs.dTurretPower);	// invert for direction 
+		//motCANTurretMotor.set(ControlMode.PercentOutput, -inputs.dTurretPower);	// invert for direction 
 
 	}
 
@@ -464,9 +478,9 @@ public class Shooter {
 		telem.saveDouble("Sh CL PID F", dPid_FeedForward, 6 );
 
 		if(bInClosedLoopMode){
-			telem.saveDouble("Sh CL Error", motCANShooterMotor.getClosedLoopError() );
-			telem.saveDouble("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
-			telem.saveDouble("Sh CL Target Vel", motCANShooterMotor.getClosedLoopTarget());
+			telem.saveDouble("Sh CL Error", motCANShooterMotorRight.getClosedLoopError() );
+			telem.saveDouble("Sh CL Sen Vel", motCANShooterMotorRight.getSelectedSensorVelocity() );
+			telem.saveDouble("Sh CL Target Vel", motCANShooterMotorRight.getClosedLoopTarget());
 		}
 
 		telem.saveDouble("Sh Hood Power", this.dShooterHoodPower);
@@ -486,8 +500,8 @@ public class Shooter {
 	
 	public void outputToDashboard(final boolean b_MinDisplay)  {
 		
-		SmartDashboard.putNumber("Sh CL Sen Vel", motCANShooterMotor.getSelectedSensorVelocity() );
-		if(bInClosedLoopMode) SmartDashboard.putNumber("Sh CL Target", motCANShooterMotor.getClosedLoopTarget() );
+		SmartDashboard.putNumber("Sh CL Sen Vel", motCANShooterMotorRight.getSelectedSensorVelocity() );
+		if(bInClosedLoopMode) SmartDashboard.putNumber("Sh CL Target", motCANShooterMotorRight.getClosedLoopTarget() );
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
 		SmartDashboard.putBoolean("Sh Turret On Target", bTurretOnTarget);
 		SmartDashboard.putBoolean("Sh Up To Speed", bUpToSpeed );

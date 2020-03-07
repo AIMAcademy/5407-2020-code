@@ -63,6 +63,8 @@ public class Inputs {
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
 	public boolean bShooterVelocitySaveSetting = false;
+	public boolean bSpinUpShooter = false;
+	public boolean bRunAuton = false;
 
 	public boolean bInEndGame  = false;
 	double dMaxWinchPower = .65;
@@ -70,6 +72,8 @@ public class Inputs {
 	int iTurretRequestedToPosition = 0;
 	int iHoodRequestedToPosition = 0;
 	double dRequestedBearing = 0.0;
+
+	boolean bGyroNavigate = false;
 	
 
 	// class Constructor initialize your variables here
@@ -125,9 +129,12 @@ public class Inputs {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
 
+		bSpinUpShooter = false;				// force to false until we assign a button
 		iTurretRequestedToPosition = -1;    // force to -1 to indicate no requests.
 		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
 		dRequestedBearing = -1.0;
+
+		bRunAuton = joyTestController.getTrigger();
 
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;
@@ -167,6 +174,8 @@ public class Inputs {
 			dLeftWinchPower = -dMaxWinchPower;
 		}
 
+		bGyroNavigate = joyTestController.getTop();
+		
 		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
@@ -319,6 +328,7 @@ public class Inputs {
 		SmartDashboard.putNumber("I Turr Req Pos", iTurretRequestedToPosition);
 		SmartDashboard.putNumber("I Hood Req Pos",iHoodRequestedToPosition);
 		SmartDashboard.putNumber("I Hood Req Pow",dShooterHoodPower);
+		SmartDashboard.putNumber("I Gyro Req Bear",dRequestedBearing);
 
 		
 		
