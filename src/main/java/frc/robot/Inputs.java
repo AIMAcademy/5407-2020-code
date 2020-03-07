@@ -134,7 +134,7 @@ public class Inputs {
 		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
 		dRequestedBearing = -1.0;
 
-		bRunAuton = joyTestController.getTrigger();
+		bShooterLaunch = joyTestController.getTrigger();
 
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;
@@ -180,7 +180,7 @@ public class Inputs {
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
-		temp = convertJoystickAxisToValueRange(  joyTestController.getTwist(), 100 ) ;    // force to + value only
+		temp = convertJoystickAxisToValueRange(  joyTestController.getThrottle(), 100 ) ;    // force to + value only
 		if( temp < 2 ){
 			dRequestedVelocity = 0.0;
 		}else {
@@ -260,11 +260,11 @@ public class Inputs {
 			bTargetting = false;
 		}
 
-		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
-			bShooterLaunch = true;
-		}else{
-			bShooterLaunch = false;		
-		}
+		//if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
+		//	bShooterLaunch = true;
+		//}else{
+		//	bShooterLaunch = false;		
+		//}
 	
 	
 	}

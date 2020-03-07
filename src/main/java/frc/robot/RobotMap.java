@@ -30,7 +30,7 @@ class RobotMap {
     public final static int kPCMPort_BallPusherUpper = 4;
 
    // Digital Inputs
-   public final static int kDigitalInPort_BallInPlace = 9;
+   public final static int kDigitalInPort_EPCInTheWay = 9;
 
    // Analog Inputs
 
@@ -41,9 +41,9 @@ class RobotMap {
    // PWM Ports
 
    public final static int kPWMPort_IntakeMoter = 0;
-   public final static int kPWMPort_Mouth = 1;
-   // what is in 2????
-   public final static int kPWMPort_RunwayMotor = 3;
+   public final static int kPWMPort_EPCLifter  = 1;
+   public final static int kPWMPort_EPCCarousel = 2;
+
    public final static int kPWMPort_ShooterHoodMotor = 5;
 
    // Input Bottons

@@ -116,7 +116,7 @@ public class ScriptedAuton{
         String sParam = sParms[0].strip().toLowerCase();
         String[] sWords = sParam.split(" ");
 
-		if (sParam.startsWith("auton") == true){							// example auton 3, descrition
+		  if (sParam.startsWith("auton") == true){							// example auton 3, descrition
 
           iAutonNumber = Integer.valueOf(sWords[1]);
           iStepNumber = 0;

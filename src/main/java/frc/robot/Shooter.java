@@ -60,15 +60,18 @@ public class Shooter {
 
 	Solenoid    solBallPusherUpper = null;
 
-	Spark 		motPWMMouthMotor = null;
-	public double dMouth_IntakePower = .50; 
-	public double dMouth_ReversePower = -.50; 
-	double dPWMMouthMotorPower = 0.0;
+	//Spark 		motPWMMouthMotor = null;
+	//public double dMouth_IntakePower = .50; 
+	//public double dMouth_ReversePower = -.50; 
+	//double dPWMMouthMotorPower = 0.0;
+
+	Spark motPWMEPCCarousel = null;
+	Spark motPWMEPCLifter = null;
 
 	FireSequence2 fireseq = null;
 
-	DigitalInput digBallInPlace = null;
-	boolean bBallInPlace = false;
+	DigitalInput digEPCInTheWay = null;
+	boolean bEPCInTheWay = false;
 
 	Servo    motShooterHood = null;
 	AnalogInput anaShooterHood = null;
@@ -101,9 +104,13 @@ public class Shooter {
 		limelight = new Limelight(LimelightHostname);
 		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
 
-		motPWMMouthMotor = new Spark(RobotMap.kPWMPort_Mouth);
+		motPWMEPCCarousel = new Spark(RobotMap.kPWMPort_EPCCarousel);
+		motPWMEPCCarousel.set(0.0);
 
-		digBallInPlace = new DigitalInput(RobotMap.kDigitalInPort_BallInPlace);
+		motPWMEPCLifter = new Spark(RobotMap.kPWMPort_EPCLifter);
+		motPWMEPCLifter.set(0.0);
+	
+		digEPCInTheWay = new DigitalInput(RobotMap.kDigitalInPort_EPCInTheWay);
 
 		solBallPusherUpper = new Solenoid(RobotMap.kPCMPort_BallPusherUpper);
 		solBallPusherUpper.set(false);
@@ -157,44 +164,50 @@ public class Shooter {
 
 	public void update(final Inputs inputs, final Config config) {
 
-		dPWMMouthMotorPower = 0.0;									// kill this an below it will be reset
+		//dPWMMouthMotorPower = 0.0;									// kill this an below it will be reset
 		this.updateShooterVelocity(inputs);							// spinn the shootr wheel
 		// read the sensors so we all have them now
 		//iTurretPosition = anaTurretPos.getAverageValue(); 
-		iShooterHoodPosition = anaShooterHood.getAverageValue();
+		//iShooterHoodPosition = anaShooterHood.getAverageValue();
 
-		if(inputs.bTargetting == true){
-			this.Targetting(inputs);
+		//if(inputs.bTargetting == true){
+		//	this.Targetting(inputs);
+		//}
+
+		if(inputs.joyTestController.getTrigger() == true){
+			motPWMEPCCarousel.set(.2);
+			motPWMEPCLifter.set(.7);
+		}else{
+			motPWMEPCCarousel.set(0.0);
+			motPWMEPCLifter.set(0.0);
 		}
+
+		return;
 
 		//TurretPosition(inputs);
-		HoodPosition(inputs);
+		//HoodPosition(inputs);
 
-		if (digBallInPlace.get() == false) {		//Device is set for normally closed
-			bBallInPlace = false;   			//We have a connection so it's set to false
-		}else {
-			bBallInPlace = true;				//Indicates open circut, means ball inplace or wiring failure
-		}
+		//if (digEPCInTheWay.get() == false) {	//Device is set for normally closed
+		//	bEPCInTheWay = false;   			//We have a connection so it's set to false
+		//}else {
+		//	bEPCInTheWay = true;				//Indicates open circut, means EPC in th way
+		//}
 		
-		if( inputs.bIntakeIn == true)
-			LoadABall();
+		//if( inputs.bIntakeIn == true)
+		//	LoadABall();
 			
 
-		/**
-		 * turret mouth processing
-		 **/
-	
-		if (inputs.bShooterLaunch == true){
-			if( bLastShooterLaunch == false ){
-				fireseq.reset();
-			}
+		//if (inputs.bShooterLaunch == true){
+		//	if( bLastShooterLaunch == false ){
+		//		fireseq.reset();
+		//	}
 
-			fireseq.execute(inputs); //  this refers to the shooter itself. 
-		}
+		//	fireseq.execute(inputs); //  this refers to the shooter itself. 
+		//}
 
 		//motPWMMouthMotor.set(dPWMMouthMotorPower);
 		//SmartDashboard.putNumber("Sh Mouth Power", dPWMMouthMotorPower);
-		bLastShooterLaunch = inputs.bShooterLaunch;
+		//bLastShooterLaunch = inputs.bShooterLaunch;
 
 	}
 
@@ -217,15 +230,14 @@ public class Shooter {
 
 	}
 
-	public boolean LoadABall(){
+	public boolean ClearTheEPCLifter(){
 
-		if( this.bBallInPlace == true ){
-			dPWMMouthMotorPower = dMouth_ReversePower;
-			return this.bBallInPlace;
+		if( this.bEPCInTheWay == true ){
+			motPWMEPCCarousel.set(.20);
+			return this.bEPCInTheWay;
 		}
 
-		dPWMMouthMotorPower = dMouth_IntakePower;
-		return false;
+		return this.bEPCInTheWay;
 
 	}
 
@@ -246,10 +258,12 @@ public class Shooter {
 		sCLStatus = "Stopped";
 		bUpToSpeed = false;
 	
-		if( inputs.dRequestedVelocity  < 8000) {
+		if( inputs.dRequestedVelocity  < 15000) {
 			bInClosedLoopMode = false;
 			sCLStatus = "PCTMode";
-			motCANShooterMotorRight.set(ControlMode.PercentOutput, dRequestedPct);
+			motCANShooterMotorRight.set(ControlMode.PercentOutput, -dRequestedPct);
+			double dRightPCT = motCANShooterMotorRight.getMotorOutputPercent();
+			motCANShooterMotorLeft.set(ControlMode.PercentOutput, -dRightPCT);
 		} else { 
 
 			bInClosedLoopMode = true;
@@ -492,7 +506,7 @@ public class Shooter {
 		telem.saveInteger("Sh Turr Req Pos", inputs.iTurretRequestedToPosition);
 		telem.saveDouble("Sh Turr Power", inputs.dTurretPower);
 		telem.saveTrueBoolean("Sh Up To Speed", this.bUpToSpeed);
-		telem.saveTrueBoolean("Sh Ball In Place", bBallInPlace);
+		telem.saveTrueBoolean("Sh Ball In Place", bEPCInTheWay);
 
 		fireseq.writeTelemetryValues(telem);			// do these here as we have access to telem
 		limelight.writeTelemetryValues(telem);
@@ -505,7 +519,7 @@ public class Shooter {
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
 		SmartDashboard.putBoolean("Sh Turret On Target", bTurretOnTarget);
 		SmartDashboard.putBoolean("Sh Up To Speed", bUpToSpeed );
-		SmartDashboard.putBoolean("Sh Ball In Place", bBallInPlace);
+		SmartDashboard.putBoolean("Sh Ball In Place", bEPCInTheWay);
 		SmartDashboard.putString("Sh Turret State", sTurretState );
 		SmartDashboard.putNumber("Sh Hood Calc Power", dShooterHoodPower);
 		SmartDashboard.putString("Sh Hood Status", sHoodStatus);
@@ -578,9 +592,6 @@ class FireSequence2{
 
 		iLastStep = iStep;					// save this for the next loop
 
-		shooter.dPWMMouthMotorPower = 0.0;  // set the default for this motor to keep it from running
-											// this value, if unchanged below, will be applied outside this 
-											// class in shooter.
 
 		SmartDashboard.putNumber("FS2 iStep", iStep);
 		SmartDashboard.putNumber("FS2 Timer", timStepTimer.get() );
@@ -612,7 +623,7 @@ class FireSequence2{
 
 			case 2:										// see if we have a ball in place to shoot
 				sState = "Ball In Place";
-				if(shooter.bBallInPlace == true){
+				if(shooter.bEPCInTheWay == true){
 					iNextStep=10;							// ball ready to fire
 				}else{
 					iNextStep=3;							// no ball, go get one 
@@ -622,10 +633,10 @@ class FireSequence2{
 
 			case 3:
 				sState = "Load Ball";
-				shooter.LoadABall(); // pull in the next ball
+				//shooter.LoadABall(); // pull in the next ball
 
-				if(shooter.bBallInPlace == true){				// we see a ball
-					shooter.dPWMMouthMotorPower = 0.0;	// stop pull
+				if(shooter.bEPCInTheWay == true){				// we see a ball
+					//shooter.dPWMMouthMotorPower = 0.0;	// stop pull
 					iNextStep = iStep + 1;							
 				}
 
@@ -634,16 +645,13 @@ class FireSequence2{
 			case 4:
 				sState = "Settle Ball";
 
-				if(shooter.bBallInPlace == false){			// no ball go back to step 2
+				if(shooter.bEPCInTheWay == false){			// no ball go back to step 2
 					iNextStep = iStep - 1;					//previous step
 					break;
 				}
 
-				shooter.dPWMMouthMotorPower = 
-							shooter.dMouth_ReversePower;	// this will pull back the nexf ball if there is one. 
 
-				if( timStepTimer.get() > .10 && shooter.bBallInPlace == true  ){  	// do this for .15 seconds and ball in place
-					shooter.dPWMMouthMotorPower = 0.0;						  		// times up, stop motor. 
+				if( timStepTimer.get() > .10 && shooter.bEPCInTheWay == true  ){  	// do this for .15 seconds and ball in place
 					iNextStep = 10;													// step 10
 				}
 
@@ -651,7 +659,7 @@ class FireSequence2{
 
 			case 10:
 				sState = "Final Check";
-				if(shooter.bBallInPlace == false){			// final check if we have a ball
+				if(shooter.bEPCInTheWay == false){			// final check if we have a ball
 					iNextStep = 3;							// look for ball
 				} else {
 					iNextStep = 20;
