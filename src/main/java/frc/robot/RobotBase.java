@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 //import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
@@ -17,8 +18,11 @@ public class RobotBase {
 	Double dLeftDrivePower = 0.0;
 	Double dRightDrivePower = 0.0;
 
+	Inputs inputs = null;
 	Config config = null;
-	ApplyPower applyPower = null; 
+	ApplyPower applyPower = null;
+	//Limelight limelight = null;
+
 	TalonFX motLeftDriveMotorA  = null;
 	TalonFX motLeftDriveMotorB  = null;
 	TalonFX motRightDriveMotorA = null;
@@ -48,17 +52,24 @@ public class RobotBase {
 	
 	public Gyro gyro = null;
 	double dRelativeGyroBearing = 0.0;
-	double dAnglePorportion = -0.01;
+	double dAnglePorportion = -0.015;
 	boolean bIsOnGyroBearing = false;
-
+	boolean bIsOnCloseToBearing = false;
 	
+
+	double dEncoderPosition = 0.0;
+	double dEncoderDistance = 0.0;
+	public static final String k_sBaseMotorEncoderKey = "BaseMotorEncoder";
 
     /**
      * This function is run when this class is first created used for any initialization code.
      */
-    public RobotBase(Config mPassedConfig) {
+    public RobotBase(Config mPassedConfig, Inputs mPassedInputs) {
 		config = mPassedConfig;
 		loadConfig();
+
+		inputs = mPassedInputs;
+		//limelight = mPassedLimelight;
 
 		applyPower = new ApplyPower();			// get our own copy of this class
 						
@@ -78,6 +89,9 @@ public class RobotBase {
 		motLeftDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorA.set(ControlMode.PercentOutput, 0.0);
 		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
+
+		motLeftDriveMotorA.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+
 
 		motWinchLeftMotor = new CANSparkMax(RobotMap.kCANId_WinchLeftMotor,  CANSparkMaxLowLevel.MotorType.kBrushless );
 		motWinchLeftMotor.setInverted(false);
@@ -100,8 +114,6 @@ public class RobotBase {
 
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
 		motIntake.set(0.0);
-
-	
 
 		gyro = new Gyro();
 
@@ -137,30 +149,43 @@ public class RobotBase {
 		SmartDashboard.putNumber("RB Bearing dDiff", dDiff);
 		SmartDashboard.putNumber("RB Req Bearing", inputs.dRequestedBearing);
 
-		if( Math.abs(dDiff) < 3.0){
+		if( Math.abs(dDiff) < 1.0){
 			bIsOnGyroBearing = true;
 		} else {
 			bIsOnGyroBearing = false;
 		}
 
 		
-		if( inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true ){
+		if( bIsOnGyroBearing == false && inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true ){
 
 			if( inputs.dRequestedBearing == 270.0 ){
 				inputs.dRequestedBearing = -90.0;
 			}
 
-			double dMax = .3;
+			double dMax = .35;
+			double dMin = .1;
+
 			inputs.dDriverTurn = dDiff * dAnglePorportion;	// turn porportionally
-			if(inputs.dDriverTurn > dMax ){
-				inputs.dDriverTurn = Math.max(inputs.dDriverTurn, dMax); 
-			} else if(inputs.dDriverTurn < -dMax){
-				inputs.dDriverTurn = Math.min(inputs.dDriverTurn, -dMax); 
+			if(inputs.dDriverTurn > 0.0){
+				if(inputs.dDriverTurn > dMax ){
+					inputs.dDriverTurn = dMax; 
+				} else {
+					inputs.dDriverTurn = dMin;
+				} 
+			} else if(inputs.dDriverTurn < 0.0) {
+				if(inputs.dDriverTurn < -dMax){
+					inputs.dDriverTurn = -dMax; 
+				} else {
+					inputs.dDriverTurn = -dMin;
+				}
 			}
 
 		}
 	}
 
+	public void SaveEncoderPosition(){
+		applyPower.saveEncoderLocation(k_sBaseMotorEncoderKey, dEncoderPosition);
+	}
 
     /**
      * This function is run to update the output objects with data. 
@@ -178,13 +203,32 @@ public class RobotBase {
 		// For arcade we only pass power and turn.
 
 
+		dEncoderPosition = (double) motLeftDriveMotorA.getSelectedSensorPosition();
 		dRelativeGyroBearing = gyro.getGyroRelativeBearing();
 
-		GyroToAngle(inputs, gyro);
+		if( inputs.bSaveEncoderPosition ==  true){
+			applyPower.saveEncoderLocation(k_sBaseMotorEncoderKey, dEncoderPosition);
+		}
+
+		dEncoderDistance = applyPower.getEncoderDistance(k_sBaseMotorEncoderKey, dEncoderPosition);
+
+
+		if( inputs.bTargetting == false && inputs.bShooterLaunch == false){ // override gyro turning
+			GyroToAngle(inputs, gyro);
+		}
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
+
+		
+			//if( inputs.bRampPower == true){
+			//	inputs.dDriverPower = applyPower.RampPower(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
+			//							dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
+			//}
+	
+
 			dLeftDrivePower  = applyPower.getWheelPower(ApplyPower.k_iLeftRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
 			dRightDrivePower = applyPower.getWheelPower(ApplyPower.k_iRightRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
+
 
 			motLeftDriveMotorA.set(ControlMode.PercentOutput, dLeftDrivePower );
 			motLeftDriveMotorB.set(ControlMode.PercentOutput, dLeftDrivePower );
@@ -218,6 +262,8 @@ public class RobotBase {
 
 	}
 
+	
+
 	public void allowCompressorToRun(boolean bDesiredState){
 
 		if(bDesiredState == false){
@@ -248,7 +294,14 @@ public class RobotBase {
 		telem.addColumn("RB Tea Motor Power");
 		telem.addColumn("RB Tea Status");
 
+		telem.addColumn("RB Ramp Power");
+		telem.addColumn("RB Enco Save Pos");
+		telem.addColumn("RB Enco Pos");
+		telem.addColumn("RB Enco Dist");
+		telem.addColumn("RB Enco Desired Distance");
+
 		gyro.addTelemetryHeaders(telem);
+		applyPower.addTelemetryHeaders(telem);
 
     }
 
@@ -272,21 +325,27 @@ public class RobotBase {
 		telem.saveDouble("RB Tea Motor Power", this.motIntake.getSpeed());
 		telem.saveTrueBoolean("RB Tea State", bTeainatorState);
 
+		telem.saveTrueBoolean("RB Ramp Power", inputs.bRampPower);
+		telem.saveTrueBoolean("RB Enco Save Pos", inputs.bSaveEncoderPosition);
+		telem.saveDouble("RB Enco Desired Distance", inputs.dTargetDistanceUsingEncoder);
+		telem.saveDouble("RB Enco Pos", dEncoderPosition);
+		telem.saveDouble("RB Enco Dist", dEncoderDistance);
+
 		gyro.writeTelemetryValues(telem);
+		applyPower.writeTelemetryValues(telem);
 
 	}
 
     
 	// Show what variables we want to the SmartDashboard
-	public void outputToDashboard(boolean b_MinDisplay)  {
+	public void outputToDashboard(boolean b_MinDisplay, Inputs inputs)  {
 
 		gyro.outputToDashboard(b_MinDisplay);
 
 		SmartDashboard.putNumber("RB <<<Motors", dLeftDrivePower);
 		SmartDashboard.putNumber("RB >>>Motors", dRightDrivePower);
 		SmartDashboard.putBoolean("RB Gyro On Bearing", bIsOnGyroBearing);
-
-
+		SmartDashboard.putNumber("RB Enc Posit", dEncoderPosition);
 
 		if( b_MinDisplay == true ) return;
 
@@ -295,6 +354,11 @@ public class RobotBase {
 		SmartDashboard.putString("RB Comp CL State", sCompressorCLState);
 		SmartDashboard.putBoolean("Dev Stop Compressor", bDev_StopCompressor);
 		SmartDashboard.putBoolean("Dev Stop Drive Wheels", bDev_StopDriveWheels);
+
+		SmartDashboard.putBoolean("RB Enco Save Pos", inputs.bSaveEncoderPosition);
+		SmartDashboard.putNumber("RB Enco Desired Distance", inputs.dTargetDistanceUsingEncoder);
+		SmartDashboard.putNumber("RB Enco Pos", dEncoderPosition);
+		SmartDashboard.putNumber("RB Enco Dist", dEncoderDistance);
 	}
 
    

@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -26,6 +27,8 @@ public class Robot extends TimedRobot {
 	LCTelemetry telem = null;
   Config config = null;
   Limelight limelight = null;
+  public final String LimelightHostname = "limelight";   // Limelight http camera feeds
+  public HttpCamera limelightFeed;
   ScriptedAuton scriptedauton = null;  
 
   /**
@@ -39,16 +42,21 @@ public class Robot extends TimedRobot {
        
     telem     = new LCTelemetry();	
     inputs    = new Inputs();			
-    shooter    = new Shooter(config);	// pass the config file here so that it has the configs to st up the shooter		
-    robotbase = new RobotBase(config);
+    shooter    = new Shooter(config, inputs);	// pass the config file here so that it has the configs to st up the shooter		
+    robotbase = new RobotBase(config,inputs);
     limelight = new Limelight("limelight");
-    scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt");   
+		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
+   
+ 
+    scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt", telem, inputs, robotbase, shooter);   
    
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
     shooter.addTelemetryHeaders( telem );
     robotbase.addTelemetryHeaders( telem );
-
+    limelight.addTelemetryHeaders(telem);
+    scriptedauton.addTelemetryHeaders(telem);
+    
   }
 
   /**
@@ -80,7 +88,7 @@ public class Robot extends TimedRobot {
       inputs.outputToDashboard(false);
       limelight.outputToDashboard(false);
       shooter.outputToDashboard(false);
-      robotbase.outputToDashboard(false);
+      robotbase.outputToDashboard(false, inputs);
       scriptedauton.outputToDashboard(false);
   
     }
@@ -111,7 +119,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
 
-    scriptedauton.execute( 1, inputs, robotbase);
+    scriptedauton.execute( 1);
 
   }
 
@@ -127,8 +135,6 @@ public class Robot extends TimedRobot {
     robotbase.SetDevModes();
     shooter.loadConfig(config);
     scriptedauton.reset();
-    //limelight.setCameraMode(CameraMode.eDriver);
-    //limelight.setLedMode(LightMode.eOff);
     
     
     System.out.println("***** Teleop Init complete ********");
@@ -143,7 +149,7 @@ public class Robot extends TimedRobot {
     inputs.readValues();
 
     if( inputs.bRunAuton == true){
-      scriptedauton.execute( 1, inputs, robotbase);
+      scriptedauton.execute(1);
     }
 
     limelight.update(inputs);
@@ -153,12 +159,14 @@ public class Robot extends TimedRobot {
     inputs.outputToDashboard(false);
     limelight.outputToDashboard(false);
     shooter.outputToDashboard(false);
-    robotbase.outputToDashboard(false);
+    robotbase.outputToDashboard(false, inputs);
     scriptedauton.outputToDashboard(false);
     
     inputs.writeTelemetryValues(telem);				// order does not matter
+    limelight.writeTelemetryValues(telem);
     shooter.writeTelemetryValues(telem, inputs);
     robotbase.writeTelemetryValues(telem, inputs);
+    scriptedauton.writeTelemetryValues(telem);
     
     telem.writeRow();					
   }

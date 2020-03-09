@@ -23,6 +23,7 @@ public class Shooter {
 	ShooterVelocity shootvel = null;
 	TalonFX  motCANShooterMotorLeft = null;
 	TalonFX  motCANShooterMotorRight = null;
+	Inputs inputs = null;
 
 	//  PID Closed Loop Settings for shooter
 	static final int kSlotIdx = 0;  		// PID Slot 0 or 1 
@@ -44,10 +45,6 @@ public class Shooter {
 	boolean bUpToSpeed = false;
 
 
-	Limelight limelight = null;
- 	private final String LimelightHostname = "limelight";   // Limelight http camera feeds
-	private HttpCamera limelightFeed;
-	
 
 	//TalonSRX motCANTurretMotor = null;
 	AnalogInput anaTurretPos  = null;
@@ -92,17 +89,14 @@ public class Shooter {
     /**
      * This function is run when this class is first created used for any initialization code.
      */
-    public Shooter(final Config config) {
+    public Shooter(final Config config, Inputs  mPassedInputs) {
 		System.out.println("Shooter constructor init...");
 
 		fireseq = new FireSequence2(this);  // do this here to be sure it is ready when loadConfig is called. 
 		fireseq.reset();
 
 		loadConfig(config); // do this here to be sure we have the values updated before we used them.
-
-		// add limelight
-		limelight = new Limelight(LimelightHostname);
-		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
+		inputs = mPassedInputs;
 
 		motPWMEPCCarousel = new Spark(RobotMap.kPWMPort_EPCCarousel);
 		motPWMEPCCarousel.set(0.0);
@@ -164,23 +158,54 @@ public class Shooter {
 
 	public void update(final Inputs inputs, final Config config) {
 
-		//dPWMMouthMotorPower = 0.0;									// kill this an below it will be reset
-		this.updateShooterVelocity(inputs);							// spinn the shootr wheel
-		// read the sensors so we all have them now
-		//iTurretPosition = anaTurretPos.getAverageValue(); 
-		//iShooterHoodPosition = anaShooterHood.getAverageValue();
+		if(inputs.bTargetting == false && bLastShooterLaunch == false ){
+			inputs.dRequestedVelocity = 0.0;
+			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
+		}
 
-		//if(inputs.bTargetting == true){
-		//	this.Targetting(inputs);
+
+		if(inputs.bTargetting == true){
+			if( inputs.dRequestedVelocity == 0.0 ){
+				SetShooterSpeed(inputs);
+			}
+			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
+		}
+
+		// Shooter processing
+		if( bLastShooterLaunch == false ){
+				fireseq.reset();
+		}
+
+		if(inputs.bShooterLaunch == true){
+
+			if( inputs.dRequestedVelocity == 0.0 ){
+				SetShooterSpeed(inputs);
+			}
+
+			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
+
+			motPWMEPCLifter.set(.7);
+
+			if(inputs.bFastCarousel == true){
+				motPWMEPCCarousel.set(config.getDouble("shooter.dFastCarouselPower", .6));
+			} else{
+				motPWMEPCCarousel.set(config.getDouble("shooter.dSlowCarouselPower", .2));
+			}
+
+
+
+		//	fireseq.execute(inputs); //  this refers to the shooter itself. 
 		//}
 
-		if(inputs.joyTestController.getTrigger() == true){
-			motPWMEPCCarousel.set(.2);
-			motPWMEPCLifter.set(.7);
+			// read the sensors so we all have them now
+			//iShooterHoodPosition = anaShooterHood.getAverageValue();
+
+
 		}else{
 			motPWMEPCCarousel.set(0.0);
 			motPWMEPCLifter.set(0.0);
 		}
+
 
 		return;
 
@@ -196,14 +221,6 @@ public class Shooter {
 		//if( inputs.bIntakeIn == true)
 		//	LoadABall();
 			
-
-		//if (inputs.bShooterLaunch == true){
-		//	if( bLastShooterLaunch == false ){
-		//		fireseq.reset();
-		//	}
-
-		//	fireseq.execute(inputs); //  this refers to the shooter itself. 
-		//}
 
 		//motPWMMouthMotor.set(dPWMMouthMotorPower);
 		//SmartDashboard.putNumber("Sh Mouth Power", dPWMMouthMotorPower);
@@ -251,6 +268,7 @@ public class Shooter {
 	}
 
 	public void updateShooterVelocity(final Inputs inputs) {
+
 		dCLError = motCANShooterMotorRight.getClosedLoopError();
 
 		dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;
@@ -292,15 +310,26 @@ public class Shooter {
 	
 	}
 
+	private void SetShooterSpeed( Inputs inputs){
+		if( inputs.bCloseTargets == true){
+			inputs.dRequestedVelocity = 10000;
+		}
+		if( inputs.bFarTargets == true){
+			inputs.dRequestedVelocity = 14000;
+		}
+	}
+
+
+
 	private void Targetting( Inputs inputs){
 
-		double ty = limelight.getTy();
-		int iRequestedTicks = 0;
+		//int iRequestedTicks = 0;
 
-		if( Math.abs(ty) > .5){
-			iRequestedTicks = (int) ( ty * (double) iTurretTicksPerDegree);
-			inputs.iTurretRequestedToPosition = iTurretPosition - iRequestedTicks; 
-		}
+
+		//if( Math.abs(ty) > .5){
+		//	iRequestedTicks = (int) ( ty * (double) iTurretTicksPerDegree);
+		//	inputs.iTurretRequestedToPosition = iTurretPosition - iRequestedTicks; 
+		//}
 
 	}
 
@@ -429,34 +458,6 @@ public class Shooter {
 			} 
 		}
 
-		// now process turret requests from either position requests or operator
-
-		if( inputs.dTurretPower < 0.0 && 			// asking to go left (negative)
-			iTurretPosition <= iTurretLeftStop){	// we are past the left soft stop
-			inputs.dTurretPower = 0.0;				// set input to 0 to stop it.
-			sTurretState = "Full Left"; 
-		}
-		
-		if( inputs.dTurretPower > 0.0 && 			// asking to go right (positive)
-			iTurretPosition >= iTurretRigthStop  ){ // we are at or past the right soft stop
-			inputs.dTurretPower = 0.0;				// set input to 0 to stop it. 
-			sTurretState = "Full Right"; 
-		}
-
-		if(inputs.dTurretPower < 0.0){					// negative wants to go left
-			sTurretState = "<<<<<"; 
-
-		} else if(inputs.dTurretPower > 0.0){			// positive want to go right
-			sTurretState = ">>>>>";
-		}
-
-
-		//if( inputs.dTurretPower >  .20) inputs.dTurretPower =  .20;
-		//if( inputs.dTurretPower < -.20) inputs.dTurretPower = -.20;
-		SmartDashboard.putNumber("Sh Turret Req Pow", inputs.dTurretPower);
-
-		//inputs.dTurretPower = 0.0;
-		//motCANTurretMotor.set(ControlMode.PercentOutput, -inputs.dTurretPower);	// invert for direction 
 
 	}
 
@@ -481,7 +482,6 @@ public class Shooter {
 
 		
 		fireseq.addTelemetryHeaders(telem);		// do these here as we have access to telem
-		limelight.addTelemetryHeaders(telem);
 
 	}
 
@@ -509,8 +509,7 @@ public class Shooter {
 		telem.saveTrueBoolean("Sh Ball In Place", bEPCInTheWay);
 
 		fireseq.writeTelemetryValues(telem);			// do these here as we have access to telem
-		limelight.writeTelemetryValues(telem);
-    }
+	}
 	
 	public void outputToDashboard(final boolean b_MinDisplay)  {
 		
@@ -601,42 +600,24 @@ class FireSequence2{
 
 			case 0:			// Initilaize any thing you need to 
 				sState = "Init";
-				shooter.solBallPusherUpper.set(false);
 				iNextStep = iStep+1;
 				break;
 
-			case 1:									// see if we have a ball in place to shoot
-				sState = "Reset";					// test to see if we can remove this step. Saves .10 sec
-				iNextStep = iStep + 1;	  			// no ball, go get one 
-
-				/**
-				shooter.solBallPusherUpper.set(false);
-				shooter.dPWMMouthMotorPower = shooter.dMouth_ReversePower;
-
-				if(timStepTimer.get() > .10){
-					iNextStep = iStep + 1;	  			// no ball, go get one 
-				}
-				**/
-
-				break;
-
-
-			case 2:										// see if we have a ball in place to shoot
-				sState = "Ball In Place";
-				if(shooter.bEPCInTheWay == true){
+			case 1:										// see if we have a ball in place to shoot
+				sState = "Clear Ball";
+				if(shooter.bEPCInTheWay == false){
 					iNextStep=10;							// ball ready to fire
 				}else{
-					iNextStep=3;							// no ball, go get one 
+					iNextStep=2;							// no ball, go get one 
 				}
 
 				break;
 
-			case 3:
-				sState = "Load Ball";
+			case 2:
+				sState = "Clear Ball";
 				//shooter.LoadABall(); // pull in the next ball
-
-				if(shooter.bEPCInTheWay == true){				// we see a ball
-					//shooter.dPWMMouthMotorPower = 0.0;	// stop pull
+				shooter.motPWMEPCCarousel.set(.10);					// rotate slowly
+				if(shooter.bEPCInTheWay == false){				// we see a ball
 					iNextStep = iStep + 1;							
 				}
 

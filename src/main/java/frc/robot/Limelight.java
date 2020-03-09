@@ -22,6 +22,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Limelight {
 	private NetworkTableInstance table = null;
 	private String hostName;
+	public  boolean bBaseIsOnTarget = false;
+	public  boolean bShooterIsOnTraget = false;
 
 	//NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
 	//NetworkTableEntry tx = table.getEntry("tx");
@@ -31,14 +33,53 @@ public class Limelight {
 
 	public void update(Inputs inputs){
 
+		bBaseIsOnTarget = false;
+		bShooterIsOnTraget = false;
+	
 		if(inputs.bTargetting == true || inputs.bShooterLaunch == true){
-			setLedMode(LightMode.eOn);
+				LimelightXTargetting(inputs);
+				setLedMode(LightMode.eOn);
 		}else{
 			setLedMode(LightMode.eOff);
 		}
 
 	}
   
+	private void LimelightXTargetting(Inputs inputs){
+
+		double dTx = getTx();
+
+		SmartDashboard.putNumber("RB LL TX",  dTx);
+		//SmartDashboard.putNumber("RB LL dDiff", dDiff);
+		//SmartDashboard.putNumber("RB LL X Request", inputs.dRequestedBearing);
+
+		if( Math.abs(dTx) < .5){
+			bBaseIsOnTarget = true;
+		} else {
+			bBaseIsOnTarget = false;
+
+			// is on target == false
+			double dMax = .35;
+			double dMin = .1;
+
+			double dAnglePorportion = .05;
+			inputs.dDriverTurn = dTx * dAnglePorportion;	// turn porportionally
+			if(inputs.dDriverTurn > 0.0){
+				if(inputs.dDriverTurn > dMax ){
+					inputs.dDriverTurn = dMax; 
+				} else {
+					inputs.dDriverTurn = dMin;
+				} 
+			} else if(inputs.dDriverTurn < 0.0) {
+				if(inputs.dDriverTurn < -dMax){
+					inputs.dDriverTurn = -dMax; 
+				} else {
+					inputs.dDriverTurn = -dMin;
+				}
+			}
+		}
+	}
+
 	public Limelight(String hostName) {
 		this.hostName = hostName;
 		setCameraMode(CameraMode.eVision);
@@ -189,7 +230,8 @@ public class Limelight {
 		SmartDashboard.putNumber("LL dXCoord", getTx() );
 		SmartDashboard.putNumber("LL dYCoord", getTy() );
 		SmartDashboard.putNumber("LL dArea", getTa() );
-		SmartDashboard.putBoolean("LL IsTarget", isTarget() );
+		SmartDashboard.putBoolean("LL Sees Target", isTarget() ); 
+		SmartDashboard.putBoolean("LL Base X Locked", bBaseIsOnTarget);
 
 	}
 
@@ -197,7 +239,8 @@ public class Limelight {
 		telem.addColumn("LL TX");
 		telem.addColumn("LL TY");
 		telem.addColumn("LL TA");
-		telem.addColumn("LL Is Target");
+		telem.addColumn("LL Sees Target");
+		telem.addColumn("LL Base X Locked");
 
 	}
 
@@ -205,6 +248,7 @@ public class Limelight {
 		telem.saveDouble("LL TX", getTx() ); 
 		telem.saveDouble("LL TY", getTy() ); 
 		telem.saveDouble("LL TA", getTa() ); 
-		telem.saveTrueBoolean("LL Is Target", isTarget() ); 
+		telem.saveTrueBoolean("LL Sees Target", isTarget() ); 
+		telem.saveTrueBoolean("LL Base X Locked", bBaseIsOnTarget);
 	}
 }

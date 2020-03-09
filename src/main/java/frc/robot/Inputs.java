@@ -38,6 +38,9 @@ public class Inputs {
 	public double dHoodPower = 0.0;
 	public double dTestValue = 0.0;
 	public double dRequestedVelocity = 0.0;
+
+	public boolean bFastCarousel = false;
+	public boolean bSlowCarousel = true;
 	
 	public boolean bShooterLaunch = false;
 	public boolean bTargetting = false;
@@ -45,18 +48,19 @@ public class Inputs {
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
 
-	public boolean bRunwayIn = false;
-	public boolean bRunwayOut = false;
-
-	public boolean bMouthIn = false; 
-	public boolean bMouthOut = false;
 	public boolean bLoadABall = false;
 
 	public boolean bTeainatorUp = false;
 	public boolean bTeainatorDown = false;
 
 	//public boolean bUpdateShooterPID = false;
+
+	// valuse used in the base
 	public boolean bShiftBaseToHigh = false;
+
+	public boolean bSaveEncoderPosition = false;		// save the current position when using encoders
+	public boolean bRampPower = false;					// request to use power ramping when using encoders
+	public double dTargetDistanceUsingEncoder = 0.0;	// how far you want to go when using encoders
 
 	public double dShooterHoodPower = 0.0;
 
@@ -64,6 +68,9 @@ public class Inputs {
 	public boolean bShooterVelocity_Lower = false;
 	public boolean bShooterVelocitySaveSetting = false;
 	public boolean bSpinUpShooter = false;
+	public boolean bCloseTargets = true;
+	public boolean bFarTargets = false;
+
 	public boolean bRunAuton = false;
 
 	public boolean bInEndGame  = false;
@@ -129,12 +136,18 @@ public class Inputs {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
 
+		// set defaults for the base
+		dTargetDistanceUsingEncoder = 0.0;
+		bRampPower = false;					// use to tell bas to ramp the power using the encoder
+		bSaveEncoderPosition = false;		// force to false so someone else can set it later
+		dRequestedBearing = -1.0;
+
+		// set defaults for the shooter
 		bSpinUpShooter = false;				// force to false until we assign a button
 		iTurretRequestedToPosition = -1;    // force to -1 to indicate no requests.
 		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
-		dRequestedBearing = -1.0;
 
-		bShooterLaunch = joyTestController.getTrigger();
+		bShooterLaunch = joyTestController.getRawButton(12);
 
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;
@@ -149,10 +162,12 @@ public class Inputs {
 
     	// you can overload the inputs to test different ideas. 
 		//double temp  = F.getY(Hand.kLeft) ;	    //  we cook this down as full is too fast
-		double temp  = gamepadDriver.getY(Hand.kRight) ;	    // we cook this down as full is too fast
+		double temp  = -gamepadDriver.getY(Hand.kRight) ;	    // we cook this down as full is too fast
+		//double temp = -joyTestController.getY();				// - to make it range 1.0 to -1.0 vs -1.0 to 1.0
 		dDriverPower = temp * Math.abs(temp * temp * temp);     // quad it to desensatize the turn power 
 		
 		temp  = gamepadDriver.getX(Hand.kLeft) ;	    					// we cook this down as full is too fast
+		//temp = joyTestController.getZ();
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 
 		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
@@ -164,24 +179,41 @@ public class Inputs {
 		temp  = gamepadOperator.getY(Hand.kRight) ;	    		// we cook this down as full is too fast
 		dRightWinchPower = temp * Math.abs(temp * temp * temp);  // set these now, adjust when we determine end game
 
-		dTurretPOV = gamepadDriver.getPOV();
 
-		if(gamepadOperator.getPOV() == 0){
-			dRightWinchPower = dMaxWinchPower;
-			dLeftWinchPower = dMaxWinchPower;
-		} else if(gamepadOperator.getPOV() == 180){
-			dRightWinchPower = -dMaxWinchPower;
-			dLeftWinchPower = -dMaxWinchPower;
+		if( bInEndGame == true){
+			if(gamepadOperator.getPOV() == 0){
+				dRightWinchPower = dMaxWinchPower;
+				dLeftWinchPower = dMaxWinchPower;
+			} else if(gamepadOperator.getPOV() == 180){
+				dRightWinchPower = -dMaxWinchPower;
+				dLeftWinchPower = -dMaxWinchPower;
+			}
+		} else {
+			if(gamepadOperator.getPOV() == 0){
+				bCloseTargets = true;
+				bFarTargets = false;
+
+				bFastCarousel = true;
+				bSlowCarousel = false;
+				
+			} else if(gamepadOperator.getPOV() == 180){
+				bFastCarousel = true;
+				bSlowCarousel = false;
+
+				bCloseTargets = false;
+				bFarTargets = true;
+			}
 		}
 
 		bGyroNavigate = joyTestController.getTop();
+		bRunAuton = joyTestController.getRawButton(11);
 		
 		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
 
 		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
 		
 		temp = convertJoystickAxisToValueRange(  joyTestController.getThrottle(), 100 ) ;    // force to + value only
-		if( temp < 2 ){
+		if( temp < 10 ){
 			dRequestedVelocity = 0.0;
 		}else {
 			dRequestedVelocity = 6000 + temp * 100;			// raise in 100 ticks increments
@@ -189,9 +221,6 @@ public class Inputs {
 		//dRequestedVelocity = 0.0;
 
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
-
-		bMouthIn = false; 
-		bMouthOut = false; 
 
 		/**
 		 * Teainator in/out  processing
@@ -245,26 +274,18 @@ public class Inputs {
 			//bShooterHeightP = false;
 			//bShooterHeightLower = false;
 		}
-
-
-//		dRightWinchPower *= .65;
-//		dLeftWinchPower *= .65;
-	
 		
-		//bShooterVelocity_Lower = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Lower);
-		//bShooterVelocity_Raise = joyTestController.getRawButtonPressed(RobotMap.kButton_ShooterVelocity_Raise);
-
 		if (gamepadOperator.getTriggerAxis(Hand.kLeft) > 0.7){		// Prevent accidental presses
 			bTargetting = true;
 		} else {
 			bTargetting = false;
 		}
 
-		//if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
-		//	bShooterLaunch = true;
-		//}else{
-		//	bShooterLaunch = false;		
-		//}
+		if (gamepadOperator.getTriggerAxis(Hand.kRight) > 0.7){		// Prevent accidental presses
+			bShooterLaunch = true;
+		}else{
+			bShooterLaunch = false;		
+		}
 	
 	
 	}
@@ -329,6 +350,11 @@ public class Inputs {
 		SmartDashboard.putNumber("I Hood Req Pos",iHoodRequestedToPosition);
 		SmartDashboard.putNumber("I Hood Req Pow",dShooterHoodPower);
 		SmartDashboard.putNumber("I Gyro Req Bear",dRequestedBearing);
+		SmartDashboard.putBoolean("I Close Targets",bCloseTargets);
+		SmartDashboard.putBoolean("I Far Targets",bFarTargets);
+		SmartDashboard.putBoolean("I Fast Carousel",bFastCarousel);
+		SmartDashboard.putBoolean("I Slow Carousel",bSlowCarousel);
+		SmartDashboard.putNumber("I Req Veloc",dRequestedVelocity);
 
 		
 		

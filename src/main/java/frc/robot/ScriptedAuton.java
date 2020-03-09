@@ -76,15 +76,26 @@ public class ScriptedAuton{
   private String sAction = "";
   private String sValue = "";
   private String sDesc = "";
-  
-  
+
+  LCTelemetry telem = null;
+  Inputs inputs = null;
+  RobotBase robotbase = null;
+  Shooter shooter = null;
+    
   Timer timStepTimer = null;
   boolean bAutonComplete = false;
   
   public TreeMap<String,AutonStep> mapValues = new TreeMap<String,AutonStep>();
 
-  public  ScriptedAuton(String sPassedFilePath, String sPassedFileName) {
-  	sFileName = sPassedFilePath + File.separator + sPassedFileName;
+  public  ScriptedAuton(String sPassedFilePath, String sPassedFileName, 
+            LCTelemetry mPassedTelem, Inputs mPassedInputs, 
+            RobotBase mPassedRobotBase, Shooter mPassedShooter){
+    this.telem = mPassedTelem;               // pass in the telem class
+    this.inputs = mPassedInputs;
+    this.robotbase = mPassedRobotBase;
+    this.shooter = mPassedShooter; 
+
+    sFileName = sPassedFilePath + "/" + sPassedFileName;
     loadScript(sFileName);
     timStepTimer = new Timer();
     timStepTimer.start();
@@ -188,8 +199,9 @@ public class ScriptedAuton{
 
   }
   
-  public void execute(Integer iRunningAutonId, Inputs inputs, RobotBase robotbase){
+  public void execute(Integer iRunningAutonId){
 
+    this.telem.saveInteger("SA Auton Number", iRunningAutonId);
     SmartDashboard.putNumber("SA Auton Id", iRunningAutonId);
 
     if( this.iStepNumber == 0 ){
@@ -204,23 +216,24 @@ public class ScriptedAuton{
       bStepIsSetup = false;
       bStepIsComplete = false;
       timStepTimer.reset();
-      //robotbase.encoderReset();
-      //
+      robotbase.SaveEncoderPosition();
     }
+
+    telem.saveTrueBoolean("SA Step Is Setup", this.bStepIsSetup);
     
     this.iLastStepNumber = this.iStepNumber;
 
     if( bStepIsSetup == true ){               // force us to go through at least 1 pass
-      testCompletion(iRunningAutonId, inputs, robotbase);
+      testCompletion(iRunningAutonId);
 
       if(bAutonComplete == true){
-        stopAll(inputs, robotbase);
+        //stopAll();
         return;
       }
         
     }
 	
-  	setAutonActions(iRunningAutonId, inputs, robotbase);
+  	setAutonActions(iRunningAutonId);
 
 		if(this.bStepIsComplete == true){
 			this.iNextStepNumber = this.iStepNumber += 1;
@@ -230,7 +243,7 @@ public class ScriptedAuton{
 
   }  
 
-  public void stopAll( Inputs inputs, RobotBase robotbase ){
+  public void stopAll(){
     inputs.dDriverPower = 0.0;
     inputs.dDriverTurn = 0.0;
     inputs.dRequestedBearing = 0.0;
@@ -241,7 +254,7 @@ public class ScriptedAuton{
     inputs.bSpinUpShooter = false;
   }
 
-  private void setAutonActions(Integer iRunningAutonId, Inputs inputs, RobotBase robotbase ){
+  private void setAutonActions(Integer iRunningAutonId){
 
     String sStartKey = String.format( "%02d|%02d|01", iRunningAutonId, this.iStepNumber);
 
@@ -258,15 +271,18 @@ public class ScriptedAuton{
           break;
         }
 
-        if( autonStep.sAction.equals("distance")){
-                                                        // do nothing here, will be used to test we are done. 
-        } else if(autonStep.sAction.equals("fire")) {   // start the shooter start machine
+        if(autonStep.sAction.equals("fire")) {   // start the shooter start machine
           inputs.bShooterLaunch = true;                     //    hold the trigger 
+
         } else if( autonStep.sAction.equals("bearing")){// change the gyro bearing
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
           inputs.bGyroNavigate = true;                      //    tell gyro to go there
-        } else if( autonStep.sAction.equals("high")){   // shift to high on transmission
-          inputs.bShiftBaseToHigh = true;                   //    hold the button
+
+        } else if( autonStep.sAction.equals("distance")){// drive a specific encoder distance
+            inputs.dTargetDistanceUsingEncoder = 
+                                          autonStep.dValue; // tell downstream this is our target encoder distance 
+            inputs.bRampPower = true;                       // tell downstream we want to ramp the power
+
         } else if( autonStep.sAction.equals("ingest")){	// test conditions for ingest
           if( autonStep.dValue == 0.0) {                    //    0.0 indicates to turn it off. 
             inputs.bTeainatorUp = true;                     //        hold the button to lift it up
@@ -277,13 +293,17 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("power")){      // update the variable for driver power
           inputs.dDriverPower = autonStep.dValue;           //    set the driver power
+
         } else if( autonStep.sAction.equals("spin")){	      // if this is not in the step injest remains unchanged
           inputs.bSpinUpShooter = true;                 //    spin the shooter to a predetermined value
+
         } else if( autonStep.sAction.equals("settle")){	      // if this is not in the step injest remains unchanged
           inputs.dDriverPower = 0.0;              
-          inputs.dDriverTurn = 0.0;               
+          inputs.dDriverTurn = 0.0;           
+
         } else if( autonStep.sAction.equals("timer")){
-                                                        // do nothing, will be used later to test we are done. 
+                                                        // do nothing, will be used later to test we are done.
+
         } else if( autonStep.sAction.equals("turnto")){
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
           inputs.bGyroNavigate = true;                      //    tell gyro to go there
@@ -291,7 +311,7 @@ public class ScriptedAuton{
     }
   }
 
-  private void testCompletion(Integer iRunningAutonId, Inputs inputs, RobotBase robotbase ){
+  private void testCompletion(Integer iRunningAutonId){
 
     String sStartKey = String.format( "%02d|%02d|01", iRunningAutonId, this.iStepNumber);
 
@@ -304,7 +324,9 @@ public class ScriptedAuton{
       }
       
       if( autonStep.sAction.equals("distance")){
-          this.bStepIsComplete = true;                  // TODO: Need to put the real test in here
+          if( Math.abs(robotbase.dEncoderDistance) > autonStep.dValue ){
+            this.bStepIsComplete = true; 
+          }  
       } else if(autonStep.sAction.equals("fire")) {
           this.bStepIsComplete = true;                  // TODO: Need to put the real test in here
         } else if( autonStep.sAction.equals("settle")){
@@ -334,6 +356,29 @@ public class ScriptedAuton{
 
 	  
   }
+
+
+  public void addTelemetryHeaders(LCTelemetry telem ){
+		telem.addColumn("SA Auton Number"); 
+		telem.addColumn("SA Step Number"); 
+		telem.addColumn("SA Step Is Setup");
+		telem.addColumn("SA Step Is Complete");
+		telem.addColumn("SA Auton Is Complete");
+    telem.addColumn("SA Step Timer");
+    telem.addColumn("SA Ramp Power");
+
+    }
+
+  public void writeTelemetryValues(LCTelemetry telem ){
+
+		telem.saveInteger("SA Step Number", this.iStepNumber); 
+		telem.saveTrueBoolean("SA Step Is Complete", this.bStepIsComplete);
+    telem.saveTrueBoolean("SA Auton Is Complete", this.bAutonComplete);
+    telem.saveDouble("SA Step Timer", this.timStepTimer.get() );
+    telem.saveTrueBoolean("SA Ramp Power", inputs.bRampPower);
+    
+
+	}
 
   public void outputToDashboard(boolean b_MinDisplay)  {
 		SmartDashboard.putNumber("SA I Step Number",this.iStepNumber);

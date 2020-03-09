@@ -1,6 +1,6 @@
 package frc.robot;
 
-
+import java.util.HashMap;
 
 public class ApplyPower {
 
@@ -18,11 +18,69 @@ public class ApplyPower {
     public static final int k_iLeftZDrive = 3;
     public static final int k_iRightZDrive = 4;
 
+    public static final double k_dCalculatedError = -10000000000.0;
+
+    public HashMap<String,Double> mapEncoderValues = new HashMap<String,Double>();
+
+    public Double dSavedStartLocation = 0.0;
+
+    Double dPctOfDistance = 0.0;           // pct of how far we traveled
+    double dPCTOfPower = 0.0;                       // pct power over full distance. 
+    double dCalculatedPower = 0.0;      // default this in case of no changes 
+
 
     public ApplyPower(){
         // nothing to initialize for this class
     }
 
+    public void saveEncoderLocation(String sEncoderName, Double dStartLocation){
+
+        dSavedStartLocation = dStartLocation;
+        //mapEncoderValues.put(sEncoderName, dStartLocation);
+
+    }
+
+    public double getEncoderDistance(String sEncoderName, Double dCurrentLocation){
+
+        //Double dStartLocation = mapEncoderValues.getOrDefault(sEncoderName, Double.valueOf(k_dCalculatedError));
+
+        return (dCurrentLocation - dSavedStartLocation); 
+
+    }
+
+    public double RampPower( double dPower, String sEncoderName, Double dCurrentLocation, 
+                    Double dTargetDistance, Double dMinPower){
+
+        Double dRampUpPoint = .2;
+        Double dRampDownPoint = .8;
+        Double dCurrentDistance = getEncoderDistance(sEncoderName, dCurrentLocation);
+
+        //if( dCurrentDistance == k_dCalculatedError){
+        //    return k_dCalculatedError;
+        //}
+
+        dPctOfDistance = dCurrentDistance/dTargetDistance;           // pct of how far we traveled
+        dPCTOfPower = dPower * dPctOfDistance;                       // pct power over full distance. 
+        dCalculatedPower = dPower;      // default this in case of no changes 
+
+        if(dPctOfDistance < dRampUpPoint){                         
+            dCalculatedPower = dPCTOfPower/dRampUpPoint;        // from beginning to ramp up point
+        } else if(dPctOfDistance >= dRampDownPoint){            // 1/5 of the way
+            double dRampDownPCTPower = 1.0-dPCTOfPower;         // we are now at ramp down, subtrack overall pct from full power
+            dCalculatedPower = dPower * dRampDownPCTPower;
+        }
+
+        //if( dCalculatedPower > 0.0 && ) < dMinPower){
+        //    if( dCalculatedPower > 0.0  ){ 
+        //        dCalculatedPower = dMinPower;
+        //   } else if( dCalculatedPower < 0.0 ){
+        //        dCalculatedPower = -dMinPower;
+        //    }
+        // }
+
+        return dCalculatedPower;
+
+    }
 
 
     public double calcZWheelPower(int iWheel, double dPower, double dTurn, double dCrab ) {
@@ -154,6 +212,20 @@ public class ApplyPower {
         return calcWheelPower(k_iMecannum, iWheel, dPower, dTurn, dCrab );
     }
 
+    public void addTelemetryHeaders(LCTelemetry telem ){
+        telem.addColumn("AP Calc Power"); 
+        telem.addColumn("AP PCT Power" );
+        telem.addColumn("AP PCT Dist");
+    
+    }
 
+  public void writeTelemetryValues(LCTelemetry telem ){
+
+    telem.saveDouble("AP Calc Power", this.dCalculatedPower); 
+    telem.saveDouble("AP PCT Power", this.dPCTOfPower );
+    telem.saveDouble("AP PCT Dist", this.dPctOfDistance);
+    
+
+ }
 
 };
