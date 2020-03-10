@@ -37,7 +37,7 @@ public class Limelight {
 		bShooterIsOnTraget = false;
 	
 		if(inputs.bTargetting == true || inputs.bShooterLaunch == true){
-				LimelightXTargetting(inputs);
+				//LimelightXTargetting(inputs);
 				setLedMode(LightMode.eOn);
 		}else{
 			setLedMode(LightMode.eOff);
@@ -53,6 +53,8 @@ public class Limelight {
 		//SmartDashboard.putNumber("RB LL dDiff", dDiff);
 		//SmartDashboard.putNumber("RB LL X Request", inputs.dRequestedBearing);
 
+		bBaseIsOnTarget = true;
+		
 		if( Math.abs(dTx) < .5){
 			bBaseIsOnTarget = true;
 		} else {

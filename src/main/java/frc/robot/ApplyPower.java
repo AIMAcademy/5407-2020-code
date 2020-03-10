@@ -27,9 +27,13 @@ public class ApplyPower {
     Double dPctOfDistance = 0.0;           // pct of how far we traveled
     double dPCTOfPower = 0.0;                       // pct power over full distance. 
     double dCalculatedPower = 0.0;      // default this in case of no changes 
+    double dRampUpPoint = .10;
+    double dRampDownPoint = .90;
+    double dTicksToInches = 2727.272727;
 
 
     public ApplyPower(){
+		
         // nothing to initialize for this class
     }
 
@@ -40,6 +44,12 @@ public class ApplyPower {
 
     }
 
+	public void loadConfig(Config config){
+		dRampUpPoint = config.getDouble("applypower.dRampUpPoint", .1);
+		dRampDownPoint = config.getDouble("applypower.dRampDownPoint",.9);
+
+	}
+		
     public double getEncoderDistance(String sEncoderName, Double dCurrentLocation){
 
         //Double dStartLocation = mapEncoderValues.getOrDefault(sEncoderName, Double.valueOf(k_dCalculatedError));
@@ -51,8 +61,6 @@ public class ApplyPower {
     public double RampPower( double dPower, String sEncoderName, Double dCurrentLocation, 
                     Double dTargetDistance, Double dMinPower){
 
-        Double dRampUpPoint = .2;
-        Double dRampDownPoint = .8;
         Double dCurrentDistance = getEncoderDistance(sEncoderName, dCurrentLocation);
 
         //if( dCurrentDistance == k_dCalculatedError){
@@ -66,22 +74,29 @@ public class ApplyPower {
         if(dPctOfDistance < dRampUpPoint){                         
             dCalculatedPower = dPCTOfPower/dRampUpPoint;        // from beginning to ramp up point
         } else if(dPctOfDistance >= dRampDownPoint){            // 1/5 of the way
-            double dRampDownPCTPower = 1.0-dPCTOfPower;         // we are now at ramp down, subtrack overall pct from full power
+            double dRampDownPCTPower = dPower-dPCTOfPower;         // we are now at ramp down, subtrack overall pct from full power
             dCalculatedPower = dPower * dRampDownPCTPower;
         }
 
-        //if( dCalculatedPower > 0.0 && ) < dMinPower){
-        //    if( dCalculatedPower > 0.0  ){ 
-        //        dCalculatedPower = dMinPower;
-        //   } else if( dCalculatedPower < 0.0 ){
-        //        dCalculatedPower = -dMinPower;
-        //    }
-        // }
+        if( Math.abs(dCalculatedPower) < dMinPower){
+            if( dCalculatedPower > 0.0  ){ 
+                dCalculatedPower = dMinPower;
+           } else if( dCalculatedPower < 0.0 ){
+                dCalculatedPower = -dMinPower;
+            }
+        }
 
         return dCalculatedPower;
 
     }
 
+	public double inchesToTicks( double dInches ){
+		return dInches * dTicksToInches;
+	}
+
+	public double ticksToInches( double dTicks ){
+		return dTicks / dTicksToInches;
+	}
 
     public double calcZWheelPower(int iWheel, double dPower, double dTurn, double dCrab ) {
 

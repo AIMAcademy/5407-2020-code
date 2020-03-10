@@ -63,6 +63,7 @@ public class Inputs {
 	public double dTargetDistanceUsingEncoder = 0.0;	// how far you want to go when using encoders
 
 	public double dShooterHoodPower = 0.0;
+	public double dRequestedCameraPosition = 0.0;
 
 	public boolean bShooterVelocity_Raise = false;
 	public boolean bShooterVelocity_Lower = false;
@@ -197,8 +198,8 @@ public class Inputs {
 				bSlowCarousel = false;
 				
 			} else if(gamepadOperator.getPOV() == 180){
-				bFastCarousel = true;
-				bSlowCarousel = false;
+				bFastCarousel = false;
+				bSlowCarousel = true;
 
 				bCloseTargets = false;
 				bFarTargets = true;
@@ -210,15 +211,18 @@ public class Inputs {
 		
 		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
 
-		//dShooterPower = convertJoystickAxisToValueRange( gamepadDriver.getTwist(), 1.0 ) ; // force to + value only
-		
-		temp = convertJoystickAxisToValueRange(  joyTestController.getThrottle(), 100 ) ;    // force to + value only
-		if( temp < 10 ){
+		//temp = convertJoystickAxisToValueRange( joyTestController.getTwist(), 100 ) ; // force to + value only
+		//temp = convertJoystickAxisToValueRange(  joyTestController.getThrottle(), 100 ) ;    // force to + value only
+		if( temp < 100 ){
 			dRequestedVelocity = 0.0;
 		}else {
 			dRequestedVelocity = 6000 + temp * 100;			// raise in 100 ticks increments
 		}
 		//dRequestedVelocity = 0.0;
+
+		//temp =  convertJoystickAxisToValueRange( joyTestController.getTwist(), 1 ) ; // force to + value only
+		temp = joyTestController.getTwist();
+		dRequestedCameraPosition = temp;
 
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
 
@@ -355,7 +359,7 @@ public class Inputs {
 		SmartDashboard.putBoolean("I Fast Carousel",bFastCarousel);
 		SmartDashboard.putBoolean("I Slow Carousel",bSlowCarousel);
 		SmartDashboard.putNumber("I Req Veloc",dRequestedVelocity);
-
+		SmartDashboard.putNumber("I Req Camear Pos",dRequestedCameraPosition);
 		
 		
 		if ( b_MinDisplay == false ){

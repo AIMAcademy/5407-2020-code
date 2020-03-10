@@ -23,6 +23,7 @@ public class Shooter {
 	ShooterVelocity shootvel = null;
 	TalonFX  motCANShooterMotorLeft = null;
 	TalonFX  motCANShooterMotorRight = null;
+	Servo    svoCamera = null;
 	Inputs inputs = null;
 
 	//  PID Closed Loop Settings for shooter
@@ -138,6 +139,8 @@ public class Shooter {
 		//motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
 		//motCANTurretMotor.setInverted(false); // invert direction to match gearing
 
+		svoCamera = new Servo(3);
+
 		motShooterHood = new Servo(RobotMap.kPWMPort_ShooterHoodMotor);
 		anaShooterHood = new AnalogInput(RobotMap.kAnalogPort_ShooterHood);
 
@@ -157,6 +160,8 @@ public class Shooter {
 
 
 	public void update(final Inputs inputs, final Config config) {
+
+		svoCamera.set(inputs.dRequestedCameraPosition);
 
 		if(inputs.bTargetting == false && bLastShooterLaunch == false ){
 			inputs.dRequestedVelocity = 0.0;
@@ -184,10 +189,10 @@ public class Shooter {
 
 			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
 
-			motPWMEPCLifter.set(.7);
+			motPWMEPCLifter.set(config.getDouble("shooter.dEPCLifterPower", .7));
 
 			if(inputs.bFastCarousel == true){
-				motPWMEPCCarousel.set(config.getDouble("shooter.dFastCarouselPower", .6));
+				motPWMEPCCarousel.set(config.getDouble("shooter.dFastCarouselPower", .5));
 			} else{
 				motPWMEPCCarousel.set(config.getDouble("shooter.dSlowCarouselPower", .2));
 			}
@@ -536,6 +541,8 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh CL Req Pct", dRequestedPct);
 		SmartDashboard.putNumber("Sh Turret Pos", anaTurretPos.getAverageValue());
 		SmartDashboard.putNumber("Sh Hood Pos", anaShooterHood.getAverageValue() );
+		SmartDashboard.putNumber("Sh EPC Lifter", motPWMEPCLifter.get() );
+		
 		//SmartDashboard.putNumber("Sh Hood Pow", motS );
 	}
 }
