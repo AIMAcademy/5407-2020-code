@@ -34,21 +34,18 @@ public class Inputs {
 
 	public double dDriverTurn = 0.0;
 	public double dShooterPower = 0.0;
-	public double dTurretPower = 0.0;
 	public double dHoodPower = 0.0;
 	public double dTestValue = 0.0;
 	public double dRequestedVelocity = 0.0;
-
-	public boolean bFastCarousel = false;
-	public boolean bSlowCarousel = true;
+	public double dRequestedCarouselPower = 0.0;		//set this power anywhere to spin carousel
+	public boolean bFastCarousel = false;				// fast used for close targets
+	public boolean bSlowCarousel = true;				// Slow used for far targets. 
 	
 	public boolean bShooterLaunch = false;
 	public boolean bTargetting = false;
 
 	public boolean bIntakeIn = false;
 	public boolean bIntakeOut = false;
-
-	public boolean bLoadABall = false;
 
 	public boolean bTeainatorUp = false;
 	public boolean bTeainatorDown = false;
@@ -76,8 +73,7 @@ public class Inputs {
 
 	public boolean bInEndGame  = false;
 	double dMaxWinchPower = .65;
-	double dTurretPOV = 0.0; 
-	int iTurretRequestedToPosition = 0;
+
 	int iHoodRequestedToPosition = 0;
 	double dRequestedBearing = 0.0;
 
@@ -120,7 +116,6 @@ public class Inputs {
 		telem.saveDouble("I Shooter Power", this.dShooterPower );
 		telem.saveDouble("I Sh Hood Power", this.dHoodPower );
 		telem.saveTrueBoolean("I Shooter Launch", this.bShooterLaunch );
-		telem.saveDouble("I Turret Power", this.dTurretPower );
 		telem.saveTrueBoolean("I Intake In", this.bIntakeIn);
 		telem.saveTrueBoolean("I Intake Out", this.bIntakeOut);
 		telem.saveDouble("I Req Vel", this.dRequestedVelocity );
@@ -145,8 +140,9 @@ public class Inputs {
 
 		// set defaults for the shooter
 		bSpinUpShooter = false;				// force to false until we assign a button
-		iTurretRequestedToPosition = -1;    // force to -1 to indicate no requests.
 		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
+
+		dRequestedCarouselPower = 0.0;
 
 		bShooterLaunch = joyTestController.getRawButton(12);
 
@@ -171,8 +167,8 @@ public class Inputs {
 		//temp = joyTestController.getZ();
 		dDriverTurn = temp * Math.abs(temp * temp * temp);      // quad it to desensatize the robot turn power 
 
-		temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
-		dTurretPower = temp * Math.abs(temp * temp * temp);    	// quad it to desensatize the turret turn power 
+		//temp  = gamepadOperator.getX(Hand.kLeft) ;	    		// we cook this down as full is too fast
+		//dTurretPower = temp * Math.abs(temp * temp * temp);    	// quad it to desensatize the turret turn power 
 
 		temp  = gamepadOperator.getY(Hand.kLeft) ;	    		// we cook this down as full is too fast
 		dLeftWinchPower = temp * Math.abs(temp * temp * temp);  // set these now, adjust when we determine end game
@@ -209,8 +205,6 @@ public class Inputs {
 		bGyroNavigate = joyTestController.getTop();
 		bRunAuton = joyTestController.getRawButton(11);
 		
-		SmartDashboard.putNumber("I Turret Power" , dTurretPower);
-
 		//temp = convertJoystickAxisToValueRange( joyTestController.getTwist(), 100 ) ; // force to + value only
 		//temp = convertJoystickAxisToValueRange(  joyTestController.getThrottle(), 100 ) ;    // force to + value only
 		if( temp < 100 ){
@@ -274,7 +268,6 @@ public class Inputs {
 		if( bInEndGame == true){
 			dDriverPower *= .3;			// allow only small movements
 			dDriverTurn *= .3;
-			dTurretPower = 0.0;			// not allowed in end game mode
 			//bShooterHeightP = false;
 			//bShooterHeightLower = false;
 		}
@@ -349,8 +342,6 @@ public class Inputs {
 		SmartDashboard.putBoolean("I In End Game",bInEndGame);
 		SmartDashboard.putBoolean("I Sh Launch",bShooterLaunch);	
 		SmartDashboard.putBoolean("I Sh Intake",bIntakeIn);	
-		SmartDashboard.putNumber("I Turr POV",dTurretPOV);
-		SmartDashboard.putNumber("I Turr Req Pos", iTurretRequestedToPosition);
 		SmartDashboard.putNumber("I Hood Req Pos",iHoodRequestedToPosition);
 		SmartDashboard.putNumber("I Hood Req Pow",dShooterHoodPower);
 		SmartDashboard.putNumber("I Gyro Req Bear",dRequestedBearing);

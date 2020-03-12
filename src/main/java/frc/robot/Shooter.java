@@ -46,27 +46,15 @@ public class Shooter {
 	boolean bUpToSpeed = false;
 
 
-
-	//TalonSRX motCANTurretMotor = null;
-	AnalogInput anaTurretPos  = null;
-	int iTurretLeftStop = 300;		// check config file
-	int iTurretRigthStop = 3400;	// check config file
-	String sTurretState = "";
-	boolean bTurretOnTarget = false;
-	boolean bTurretRequestedToPosition = false;
-	int iTurretPosition = 0;
-
-	Solenoid    solBallPusherUpper = null;
-
-	//Spark 		motPWMMouthMotor = null;
-	//public double dMouth_IntakePower = .50; 
-	//public double dMouth_ReversePower = -.50; 
-	//double dPWMMouthMotorPower = 0.0;
-
 	Spark motPWMEPCCarousel = null;
+	double dFastCarouselPower = 0.7;
+	double dSlowCarouselPower = 0.2;
+
 	Spark motPWMEPCLifter = null;
 
+
 	FireSequence2 fireseq = null;
+	boolean bFireSequenceIsComplete = false;
 
 	DigitalInput digEPCInTheWay = null;
 	boolean bEPCInTheWay = false;
@@ -81,23 +69,30 @@ public class Shooter {
 	int iShooterHoodPosition = 0;
 	String sHoodStatus = "---";
 	int iDiff = 0;
-	int iTurretTicksPerDegree = 5;
 
+	double dEPCLifterPower = 0.0;
+	double dEPCLifterSpeed = 0.0;
+
+	double dCamera_TopStop = .401;
+	double dCamera_Store = .535;
+	double dCamera_Bar = .535;
+	double dCamera_CloseTargets = .472;
+	double dCamera_FarTargets = .456;
+	double dCamera_EPCView = .732;
 
 	boolean bLastShooterLaunch = false;             // what was the launch value last cycle.
-
 	
     /**
      * This function is run when this class is first created used for any initialization code.
      */
     public Shooter(final Config config, Inputs  mPassedInputs) {
 		System.out.println("Shooter constructor init...");
+		inputs = mPassedInputs;
+		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
 		fireseq = new FireSequence2(this);  // do this here to be sure it is ready when loadConfig is called. 
 		fireseq.reset();
 
-		loadConfig(config); // do this here to be sure we have the values updated before we used them.
-		inputs = mPassedInputs;
 
 		motPWMEPCCarousel = new Spark(RobotMap.kPWMPort_EPCCarousel);
 		motPWMEPCCarousel.set(0.0);
@@ -106,9 +101,6 @@ public class Shooter {
 		motPWMEPCLifter.set(0.0);
 	
 		digEPCInTheWay = new DigitalInput(RobotMap.kDigitalInPort_EPCInTheWay);
-
-		solBallPusherUpper = new Solenoid(RobotMap.kPCMPort_BallPusherUpper);
-		solBallPusherUpper.set(false);
 
 		motCANShooterMotorRight = new TalonFX(RobotMap.kCANId_ShooterMotorRight);
 		motCANShooterMotorRight.configFactoryDefault();
@@ -136,16 +128,11 @@ public class Shooter {
 		motCANShooterMotorLeft.set(ControlMode.PercentOutput, 0.0);
 
 
-		//motCANTurretMotor = new TalonSRX(RobotMap.kCANId_ShooterTurretMotor);
-		//motCANTurretMotor.setInverted(false); // invert direction to match gearing
-
-		svoCamera = new Servo(3);
+		svoCamera = new Servo(RobotMap.kPWMPort_CameraServo);
 
 		motShooterHood = new Servo(RobotMap.kPWMPort_ShooterHoodMotor);
 		anaShooterHood = new AnalogInput(RobotMap.kAnalogPort_ShooterHood);
 
-		anaTurretPos = new AnalogInput(RobotMap.kAnalogPort_TurretPos);
-		
 		System.out.println("Shooter constructor end...");
 
 	}
@@ -161,15 +148,35 @@ public class Shooter {
 
 	public void update(final Inputs inputs, final Config config) {
 
-		svoCamera.set(inputs.dRequestedCameraPosition);
+		dEPCLifterPower = 0.0;
 
+		if(inputs.dRequestedCameraPosition > 0.0){
+			if(inputs.dRequestedCameraPosition < dCamera_TopStop ){			// camera stops
+				inputs.dRequestedCameraPosition = dCamera_TopStop;
+			} else if( inputs.dRequestedCameraPosition > dCamera_EPCView ){  // flipped around to look for EPC (Balls)
+				inputs.dRequestedCameraPosition = dCamera_EPCView;
+			}
+			
+			svoCamera.set(inputs.dRequestedCameraPosition);
+
+		} else {
+			if(inputs.bCloseTargets == true){
+				svoCamera.set(dCamera_CloseTargets);
+			} else if(inputs.bFarTargets == true) {
+				svoCamera.set(dCamera_FarTargets);
+			} else if(inputs.bInEndGame == true) {
+				svoCamera.set(dCamera_Bar);
+			} else if(inputs.bIntakeIn == true) {
+				svoCamera.set(dCamera_EPCView);
+			} 
+		}
+		
 		if(inputs.bTargetting == false && bLastShooterLaunch == false ){
 			inputs.dRequestedVelocity = 0.0;
 			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
 		}
 
-
-		if(inputs.bTargetting == true){
+		if(inputs.bTargetting == true && inputs.bShooterLaunch == false){
 			if( inputs.dRequestedVelocity == 0.0 ){
 				SetShooterSpeed(inputs);
 			}
@@ -187,34 +194,23 @@ public class Shooter {
 				SetShooterSpeed(inputs);
 			}
 
-			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
+			this.updateShooterVelocity(inputs);							// spinn the shootr whee
 
-			motPWMEPCLifter.set(config.getDouble("shooter.dEPCLifterPower", .7));
+			fireseq.execute(inputs); //  this refers to the shooter itself. 
+		} else {
 
-			if(inputs.bFastCarousel == true){
-				motPWMEPCCarousel.set(config.getDouble("shooter.dFastCarouselPower", .5));
-			} else{
-				motPWMEPCCarousel.set(config.getDouble("shooter.dSlowCarouselPower", .2));
-			}
+			fireseq.reset();
 
+		}
 
+		motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
 
-		//	fireseq.execute(inputs); //  this refers to the shooter itself. 
-		//}
 
 			// read the sensors so we all have them now
 			//iShooterHoodPosition = anaShooterHood.getAverageValue();
 
-
-		}else{
-			motPWMEPCCarousel.set(0.0);
-			motPWMEPCLifter.set(0.0);
-		}
-
-
 		return;
 
-		//TurretPosition(inputs);
 		//HoodPosition(inputs);
 
 		//if (digEPCInTheWay.get() == false) {	//Device is set for normally closed
@@ -233,7 +229,7 @@ public class Shooter {
 
 	}
 
-	public void loadConfig(final Config config) {
+	public void loadConfig(Config config) {
 
 		dPid_Proportional = config.getDouble("shooter.dPID_P", 0.731);
 		dPid_Integral = config.getDouble("shooter.dPID_I", 0.0008);
@@ -242,24 +238,34 @@ public class Shooter {
 		dVelocitySensitivity = config.getDouble("shooter.dVelocitySensitivity", 25.0);
 		iPid_IntegralZone = config.getInt("shooter.iPID_IntegralZone", 100);
 		dCLErrorThreshold = config.getDouble("shooter.dCLErrorThreshold", 50.0);
-		iTurretLeftStop = config.getInt("shooter.iTurretLeftStop", 300);
-		iTurretRigthStop = config.getInt("shooter.iTurretRigthStop", 3400);
 		
 		iShooterHoodBottom = config.getInt("shooter.iShooterHoodBottom", 500);
 		iShooterHoodTop = config.getInt("shooter.iShooterHoodTop", 1000);
+
+		dCamera_TopStop 	 = config.getDouble("shooter.dCamera_TopStop", .401);
+		dCamera_Store 		 = config.getDouble("shooter.dCamera_Store", .535);
+		dCamera_Bar 		 = config.getDouble("shooter.dCamera_BarView", .535);
+		dCamera_CloseTargets = config.getDouble("shooter.dCamera_CloseTargets", .472);
+		dCamera_FarTargets 	 = config.getDouble("shooter.dCamera_FarTargets", .456);
+		dCamera_EPCView 	 = config.getDouble("shooter.dCamera_EPCView", .732);
+	
+		dEPCLifterSpeed      = config.getDouble("shooter.dEPCLifterSpeed", .7);
+		dSlowCarouselPower	 = config.getDouble("shooter.dSlowCarouselPower", .2);
+		dFastCarouselPower	 = config.getDouble("shooter.dFastCarouselPower", .7);
 
 		fireseq.loadConfig(config);
 
 	}
 
-	public boolean ClearTheEPCLifter(){
+	public boolean ClearTheEPCLifter(Inputs inputs){
 
-		if( this.bEPCInTheWay == true ){
-			motPWMEPCCarousel.set(.20);
-			return this.bEPCInTheWay;
+		if( this.bEPCInTheWay == true ){		// EPC (ball) is in the way
+			inputs.dRequestedCarouselPower = .15;
+			return this.bEPCInTheWay;			// return true
 		}
 
-		return this.bEPCInTheWay;
+		inputs.dRequestedCarouselPower = 0.0;
+		return this.bEPCInTheWay;				// return false
 
 	}
 
@@ -418,53 +424,6 @@ public class Shooter {
 
 	}
 
-	private void TurretPosition( Inputs inputs){
-
-		sTurretState = "Stopped"; 
-
-		if( Math.abs(inputs.dTurretPower) < .10 ){  // deadband
-			sTurretState = "Stopped"; 
-			inputs.dTurretPower = 0.0;				// set input to 0 to stop it. 
-		}
-
-		if( Math.abs(inputs.dTurretPower) == 0.0 ){  // if no one is trying to turn procees position requests
-
-			if( inputs.dTurretPOV == 0){
-				inputs.iTurretRequestedToPosition = 1291;
-				inputs.dRequestedBearing = 0.0;
-			} else if(inputs.dTurretPOV == 90){
-				inputs.iTurretRequestedToPosition = 500;
-				inputs.dRequestedBearing = 90.0;
-			} else if(inputs.dTurretPOV == 270){
-				inputs.dRequestedBearing = 270;
-				inputs.iTurretRequestedToPosition = 2190;
-			}
-
-
-			iDiff = -1;
-			// negative power is left, positive power is right
-			if(inputs.iTurretRequestedToPosition > -1) {
-				sTurretState = "Reposit";
-				iDiff = inputs.iTurretRequestedToPosition - iTurretPosition;
-				if( Math.abs(iDiff) < 5 ){
-					sTurretState = "Hit Pos";
-					inputs.dTurretPower = 0.0;
-				} else { 
-					inputs.dTurretPower =  (double) iDiff / 400.0;  // proportional response
-					if( Math.abs(inputs.dTurretPower  ) < .15){
-						if( inputs.dTurretPower < 0.0 ){
-							inputs.dTurretPower = -.15;
-						} else {
-							inputs.dTurretPower = .15;
-						}
-					}
-				}
-
-			} 
-		}
-
-
-	}
 
     public void addTelemetryHeaders(final LCTelemetry telem ){
 		telem.addColumn("Sh CL PID P");
@@ -476,14 +435,11 @@ public class Shooter {
 		telem.addColumn("Sh CL Sen Vel");
 		telem.addColumn("Sh CL Target Vel");
 		telem.addColumn("IN Shooter Launch");
-		telem.addColumn("Sh Turret State");
 		telem.addColumn("Sh Hood");
 		telem.addColumn("Sh Hood Power");
 		telem.addColumn("Sh On Target");
 		telem.addColumn("Sh Up To Speed");
-		telem.addColumn("Sh Ball In Place");
-		telem.addColumn("Sh Turr Pos");
-		telem.addColumn("Sh Turr Req Pos");
+		telem.addColumn("Sh EPC In Way");
 
 		
 		fireseq.addTelemetryHeaders(telem);		// do these here as we have access to telem
@@ -505,13 +461,8 @@ public class Shooter {
 		telem.saveDouble("Sh Hood Power", this.dShooterHoodPower);
 		telem.saveDouble("Sh Hood Posit", this.iShooterHoodPosition);
 		telem.saveTrueBoolean("In Shooter Launch", inputs.bShooterLaunch);
-		telem.saveString("Sh Turret State", sTurretState);
-		telem.saveTrueBoolean("Sh Turret On Target", bTurretOnTarget);
-		telem.saveInteger("Sh Turr Pos", iTurretPosition);
-		telem.saveInteger("Sh Turr Req Pos", inputs.iTurretRequestedToPosition);
-		telem.saveDouble("Sh Turr Power", inputs.dTurretPower);
 		telem.saveTrueBoolean("Sh Up To Speed", this.bUpToSpeed);
-		telem.saveTrueBoolean("Sh Ball In Place", bEPCInTheWay);
+		telem.saveTrueBoolean("Sh EPC In Way", bEPCInTheWay);
 
 		fireseq.writeTelemetryValues(telem);			// do these here as we have access to telem
 	}
@@ -521,13 +472,10 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh CL Sen Vel", motCANShooterMotorRight.getSelectedSensorVelocity() );
 		if(bInClosedLoopMode) SmartDashboard.putNumber("Sh CL Target", motCANShooterMotorRight.getClosedLoopTarget() );
 		SmartDashboard.putString("Sh CL Status", sCLStatus );
-		SmartDashboard.putBoolean("Sh Turret On Target", bTurretOnTarget);
 		SmartDashboard.putBoolean("Sh Up To Speed", bUpToSpeed );
 		SmartDashboard.putBoolean("Sh Ball In Place", bEPCInTheWay);
-		SmartDashboard.putString("Sh Turret State", sTurretState );
 		SmartDashboard.putNumber("Sh Hood Calc Power", dShooterHoodPower);
 		SmartDashboard.putString("Sh Hood Status", sHoodStatus);
-		SmartDashboard.putNumber("Sh Turret Pos", iTurretPosition);
 		SmartDashboard.putNumber("Sh iDiff", iDiff);
 
 		
@@ -539,7 +487,6 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh CL PID F", dPid_FeedForward );
 		SmartDashboard.putNumber("Sh CL Error", dCLError );
 		SmartDashboard.putNumber("Sh CL Req Pct", dRequestedPct);
-		SmartDashboard.putNumber("Sh Turret Pos", anaTurretPos.getAverageValue());
 		SmartDashboard.putNumber("Sh Hood Pos", anaShooterHood.getAverageValue() );
 		SmartDashboard.putNumber("Sh EPC Lifter", motPWMEPCLifter.get() );
 		
@@ -557,8 +504,9 @@ class FireSequence2{
 	boolean bStepIsSetUp = false;
 	Timer timStepTimer = null;
 	String sState = "Reset";
-	double dClearBallTime = .15;			// time to allow ingested ball to settle in shooter
+	double dClearEPCTime = .15;			// time to allow ingested ball to settle in shooter
 	double dLaunchResetTime = .10;			// time to allow launched ball to clear the shooter
+	
 
 	FireSequence2(Shooter mPassedShooter){
 		shooter = mPassedShooter;
@@ -568,13 +516,14 @@ class FireSequence2{
 
 	void loadConfig(Config config){
 		dLaunchResetTime = config.getDouble("firesequence.dLaunchResetTime", .10);
-		dClearBallTime = config.getDouble("firesequence.dClearBallTime", .15);
+		dClearEPCTime = config.getDouble("firesequence.dClearEPCTime", .15);
 	}
 
 	void reset(){
 		iStep = 0;
 		iNextStep = 0;
 		iLastStep = -1;
+		shooter.bFireSequenceIsComplete = false;
 		sState = "Init";
 	}
 
@@ -610,67 +559,53 @@ class FireSequence2{
 				iNextStep = iStep+1;
 				break;
 
-			case 1:										// see if we have a ball in place to shoot
-				sState = "Clear Ball";
-				if(shooter.bEPCInTheWay == false){
-					iNextStep=10;							// ball ready to fire
+			case 1:										// check that there isn't an epc below the lifter
+				sState = "Clear EPCLifter";
+				if(shooter.bEPCInTheWay == true){
+					shooter.ClearTheEPCLifter(inputs);	
 				}else{
-					iNextStep=2;							// no ball, go get one 
+					iNextStep= iStep + 1;				// no ball, go get one 
 				}
 
 				break;
 
 			case 2:
-				sState = "Clear Ball";
+				sState = "Spin EPCLifter";
 				//shooter.LoadABall(); // pull in the next ball
-				shooter.motPWMEPCCarousel.set(.10);					// rotate slowly
-				if(shooter.bEPCInTheWay == false){				// we see a ball
+				shooter.dEPCLifterPower = shooter.dEPCLifterSpeed;   	//Start wheel to push balls up
+				if(timStepTimer.get() > this.dClearEPCTime){			// we see a ball
 					iNextStep = iStep + 1;							
 				}
 
 				break;
 
+			case 3:
+				sState = "Spin Carousel";
+				if( inputs.bCloseTargets == true){
+					inputs.dRequestedCarouselPower = shooter.dFastCarouselPower;
+				} else if( inputs.bFarTargets == true ){
+					inputs.dRequestedCarouselPower = shooter.dSlowCarouselPower;
+				}
+
+				if( inputs.bCloseTargets == true){
+					if( timStepTimer.get() > 1.5 ){
+						this.iNextStep = this.iStep +1;  
+					} else {
+						if( shooter.bEPCInTheWay == true) { // if we see a ball
+							timStepTimer.reset();
+						}			
+
+						if( timStepTimer.get() > 3.0 ){
+							this.iNextStep = this.iStep +1;  
+						}
+					}
+				}
+
+				break;
+
 			case 4:
-				sState = "Settle Ball";
-
-				if(shooter.bEPCInTheWay == false){			// no ball go back to step 2
-					iNextStep = iStep - 1;					//previous step
-					break;
-				}
-
-
-				if( timStepTimer.get() > .10 && shooter.bEPCInTheWay == true  ){  	// do this for .15 seconds and ball in place
-					iNextStep = 10;													// step 10
-				}
-
-				break;
-
-			case 10:
-				sState = "Final Check";
-				if(shooter.bEPCInTheWay == false){			// final check if we have a ball
-					iNextStep = 3;							// look for ball
-				} else {
-					iNextStep = 20;
-				}
-
-				break;
-
-			case 20:
-				sState = "Speed?";
-				if( shooter.bUpToSpeed == true){
-					iNextStep = 21;
-				}
-
-				break;
-
-			case 21:
-				sState = "Launching";
-				shooter.solBallPusherUpper.set(true);
-
-				if( timStepTimer.get() > .15 ){		// let ball get out 
-					shooter.solBallPusherUpper.set(false);
-					iNextStep = 1;									// restart
-				}	
+			default:
+				shooter.bFireSequenceIsComplete = true;
 
 				break;
 
