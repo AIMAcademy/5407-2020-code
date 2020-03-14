@@ -52,7 +52,6 @@ public class RobotBase {
 	
 	public Gyro gyro = null;
 	double dRelativeGyroBearing = 0.0;
-	double dAnglePorportion = -0.015;
 	boolean bIsOnGyroBearing = false;
 	boolean bIsOnCloseToBearing = false;
 	
@@ -149,6 +148,7 @@ public class RobotBase {
 		SmartDashboard.putNumber("RB Bearing dDiff", dDiff);
 		SmartDashboard.putNumber("RB Req Bearing", inputs.dRequestedBearing);
 
+			
 		if( Math.abs(dDiff) < 1.0){
 			bIsOnGyroBearing = true;
 		} else {
@@ -156,15 +156,21 @@ public class RobotBase {
 		}
 
 		
-		if( bIsOnGyroBearing == false && inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true ){
+		if( bIsOnGyroBearing == false && (inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true) ){
 
 			if( inputs.dRequestedBearing == 270.0 ){
 				inputs.dRequestedBearing = -90.0;
 			}
 
+			double dAnglePorportion = -0.015;
 			double dMax = .35;
 			double dMin = .1;
-
+	
+			if( inputs.dDriverPower != 0.0 ){
+				dMax = .15;
+				dMin = .075;
+			}
+	
 			inputs.dDriverTurn = dDiff * dAnglePorportion;	// turn porportionally
 			if(inputs.dDriverTurn > 0.0){
 				if(inputs.dDriverTurn > dMax ){
@@ -216,15 +222,17 @@ public class RobotBase {
 		if( inputs.bTargetting == false && inputs.bShooterLaunch == false){ // override gyro turning
 			GyroToAngle(inputs, gyro);
 		}
+		//System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
 
 		
-			//if( inputs.bRampPower == true){
-			//	inputs.dDriverPower = applyPower.RampPower(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
-			//							dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
-			//}
-	
+			if( inputs.bRampPower == true){
+				inputs.dDriverPower = applyPower.RampPowerToEncoder(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
+										dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
+			}
+			System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
+
 
 			dLeftDrivePower  = applyPower.getWheelPower(ApplyPower.k_iLeftRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
 			dRightDrivePower = applyPower.getWheelPower(ApplyPower.k_iRightRearDrive, inputs.dDriverPower, inputs.dDriverTurn);

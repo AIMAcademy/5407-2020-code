@@ -27,8 +27,8 @@ public class ApplyPower {
     Double dPctOfDistance = 0.0;           // pct of how far we traveled
     double dPCTOfPower = 0.0;                       // pct power over full distance. 
     double dCalculatedPower = 0.0;      // default this in case of no changes 
-    double dRampUpPoint = .10;
-    double dRampDownPoint = .90;
+    double dRampUpPoint = .20;
+    double dRampDownPoint = .80;
     double dTicksToInches = 2727.272727;
 
 
@@ -45,8 +45,8 @@ public class ApplyPower {
     }
 
 	public void loadConfig(Config config){
-		dRampUpPoint = config.getDouble("applypower.dRampUpPoint", .1);
-		dRampDownPoint = config.getDouble("applypower.dRampDownPoint",.9);
+		dRampUpPoint = config.getDouble("applypower.dRampUpPoint", .2);
+		dRampDownPoint = config.getDouble("applypower.dRampDownPoint",.8);
 
 	}
 		
@@ -58,7 +58,7 @@ public class ApplyPower {
 
     }
 
-    public double RampPower( double dPower, String sEncoderName, Double dCurrentLocation, 
+    public double RampPowerToEncoder( double dPower, String sEncoderName, Double dCurrentLocation, 
                     Double dTargetDistance, Double dMinPower){
 
         Double dCurrentDistance = getEncoderDistance(sEncoderName, dCurrentLocation);
@@ -67,16 +67,20 @@ public class ApplyPower {
         //    return k_dCalculatedError;
         //}
 
-        dPctOfDistance = dCurrentDistance/dTargetDistance;           // pct of how far we traveled
-        dPCTOfPower = dPower * dPctOfDistance;                       // pct power over full distance. 
-        dCalculatedPower = dPower;      // default this in case of no changes 
+        dCalculatedPower = dPower;                              // default this in case of no changes 
+        //System.out.println(">>>>>AP IN  dCalculatedPower: " + String.valueOf(dCalculatedPower));
+        dPctOfDistance = dCurrentDistance/dTargetDistance;      // pct of how far we traveled, always positive
 
-        if(dPctOfDistance < dRampUpPoint){                         
-            dCalculatedPower = dPCTOfPower/dRampUpPoint;        // from beginning to ramp up point
-        } else if(dPctOfDistance >= dRampDownPoint){            // 1/5 of the way
-            double dRampDownPCTPower = dPower-dPCTOfPower;         // we are now at ramp down, subtrack overall pct from full power
-            dCalculatedPower = dPower * dRampDownPCTPower;
+        //if(dPctOfDistance > .95){                               // are we in the start up part
+        //    dCalculatedPower = dMinPower/2;
+        //}else 
+        //if(dPctOfDistance < dRampUpPoint){                // are we in the start up part   
+        //    dPCTOfPower = dPower * dPctOfDistance;              //      pct power over full distance. 
+        //    dCalculatedPower = dPCTOfPower/dRampUpPoint;        //      from beginning to ramp up point
+        if(Math.abs(dPctOfDistance) >= dRampDownPoint){            // are we in the end part
+            dCalculatedPower = dMinPower/2;        //      we are now at ramp down, subtrack overall pct from full power
         }
+        //System.out.println(">>>>>AP MID dCalculatedPower: " + String.valueOf(dCalculatedPower));
 
         if( Math.abs(dCalculatedPower) < dMinPower){
             if( dCalculatedPower > 0.0  ){ 
@@ -86,6 +90,7 @@ public class ApplyPower {
             }
         }
 
+        //System.out.println(">>>>>AP OUT dCalculatedPower: " + String.valueOf(dCalculatedPower));
         return dCalculatedPower;
 
     }
@@ -228,6 +233,8 @@ public class ApplyPower {
     }
 
     public void addTelemetryHeaders(LCTelemetry telem ){
+        telem.addColumn("AP Ramp Up"); 
+        telem.addColumn("AP Ramp Down"); 
         telem.addColumn("AP Calc Power"); 
         telem.addColumn("AP PCT Power" );
         telem.addColumn("AP PCT Dist");
@@ -236,6 +243,8 @@ public class ApplyPower {
 
   public void writeTelemetryValues(LCTelemetry telem ){
 
+    telem.saveDouble("AP Ramp Up", this.dRampUpPoint); 
+    telem.saveDouble("AP Ramp Down", this.dRampDownPoint); 
     telem.saveDouble("AP Calc Power", this.dCalculatedPower); 
     telem.saveDouble("AP PCT Power", this.dPCTOfPower );
     telem.saveDouble("AP PCT Dist", this.dPctOfDistance);

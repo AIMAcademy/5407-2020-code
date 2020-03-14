@@ -63,7 +63,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ScriptedAuton{
 
-  public String sFileName = null;
+  public String sScriptFileName = null;
 
   private Integer iAutonNumber = 0;
   private Integer iStepNumber = 0;
@@ -95,18 +95,20 @@ public class ScriptedAuton{
     this.robotbase = mPassedRobotBase;
     this.shooter = mPassedShooter; 
 
-    sFileName = sPassedFilePath + "/" + sPassedFileName;
-    loadScript(sFileName);
+    sScriptFileName = sPassedFilePath + "/" + sPassedFileName;
+    loadScript();
     timStepTimer = new Timer();
     timStepTimer.start();
  }
 
-  void loadScript(String sFileName){
+  public void loadScript(){
+
+    mapValues.clear();
 
     BufferedReader bufr = null;
 	  
     try {
-      FileReader fr = new FileReader(sFileName);
+      FileReader fr = new FileReader(this.sScriptFileName);
       bufr = new BufferedReader(fr);
             
       while(true){
@@ -233,7 +235,9 @@ public class ScriptedAuton{
         
     }
 	
-  	setAutonActions(iRunningAutonId);
+    setAutonActions(iRunningAutonId);
+    //System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
+
 
 		if(this.bStepIsComplete == true){
 			this.iNextStepNumber = this.iStepNumber += 1;
@@ -293,6 +297,7 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("power")){      // update the variable for driver power
           inputs.dDriverPower = autonStep.dValue;           //    set the driver power
+          //System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
         } else if( autonStep.sAction.equals("spin")){	      // if this is not in the step injest remains unchanged
           inputs.bSpinUpShooter = true;                 //    spin the shooter to a predetermined value

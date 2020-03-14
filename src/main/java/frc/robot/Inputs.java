@@ -144,7 +144,7 @@ public class Inputs {
 
 		dRequestedCarouselPower = 0.0;
 
-		bShooterLaunch = joyTestController.getRawButton(12);
+		bShooterLaunch = joyTestController.getRawButton(9);
 
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;

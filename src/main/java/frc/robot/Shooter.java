@@ -88,10 +88,11 @@ public class Shooter {
     public Shooter(final Config config, Inputs  mPassedInputs) {
 		System.out.println("Shooter constructor init...");
 		inputs = mPassedInputs;
-		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
-		fireseq = new FireSequence2(this);  // do this here to be sure it is ready when loadConfig is called. 
+		fireseq = new FireSequence2(this);  // do this here as this.loadConfig calls fireseq.loadconfig() 
 		fireseq.reset();
+
+		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
 
 		motPWMEPCCarousel = new Spark(RobotMap.kPWMPort_EPCCarousel);

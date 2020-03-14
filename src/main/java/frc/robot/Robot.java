@@ -134,7 +134,7 @@ public class Robot extends TimedRobot {
     robotbase.gyro.zeroGyroBearing();
     robotbase.SetDevModes();
     shooter.loadConfig(config);
-    scriptedauton.reset();
+    scriptedauton.loadScript();
     
     
     System.out.println("***** Teleop Init complete ********");

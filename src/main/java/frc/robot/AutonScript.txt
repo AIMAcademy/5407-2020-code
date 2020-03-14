@@ -1,4 +1,11 @@
 auton 1
+    step 1
+        Bearing  , 0    , keep on 90 degrees left
+        distance , 45000,  tttt  
+        Power    ,   .50, tttt 
+
+
+auton 2
 
     step 1 
         Turnto , -90    , Turn to 90 degrees left
@@ -23,7 +30,7 @@ auton 1
         Turnto , 0    , Turn to score area
 
 
-auton 2
+auton 3
     step 1
         bearing ,   0, straight ahead
         distance, 15000   , drive forward 
