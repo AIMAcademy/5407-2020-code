@@ -1,8 +1,16 @@
 auton 1
     step 1
         Bearing  , 0    , keep on 90 degrees left
-        distance , 45000,  tttt  
-        Power    ,   .50, tttt 
+        distance , 120000,  tttt  
+        Power    ,   1.0, tttt 
+
+    step 2
+	settle , .5, settle
+
+    step 3
+        Bearing  , 0    , keep on 90 degrees left
+        distance , 120000,  tttt  
+        Power    ,   -1.0, tttt 
 
 
 auton 2

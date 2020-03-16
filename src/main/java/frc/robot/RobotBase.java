@@ -54,7 +54,13 @@ public class RobotBase {
 	double dRelativeGyroBearing = 0.0;
 	boolean bIsOnGyroBearing = false;
 	boolean bIsOnCloseToBearing = false;
-	
+	double dGyroDiffPower = 0.0;
+	double dGyroDeflectionPower = 0.0;
+	double dCorrectAngleProportion = -0.05;
+	double dCorrectAngleMax = .35;
+	double dCorrectAngleMin = .2;
+	double dGyroSensitivity = .4;
+
 
 	double dEncoderPosition = 0.0;
 	double dEncoderDistance = 0.0;
@@ -122,6 +128,10 @@ public class RobotBase {
 
 		bDev_StopCompressor = config.getBoolean("robotbase.bDev_StopCompressor", false);
 		bDev_StopDriveWheels = config.getBoolean("robotbase.bDev_StopDriveWheels", false); 
+		dCorrectAngleProportion = config.getDouble("robotbase.dCorrectAngleProportion",-0.03);
+		dCorrectAngleMin = config.getDouble("robotbase.dCorrectAngleMin",.15);
+		dCorrectAngleMax = config.getDouble("robotbase.dCorrectAngleMax",.35);
+		dGyroSensitivity = config.getDouble("robotbase.dGyroSensitivity",.5);
 
 	}
 
@@ -143,50 +153,50 @@ public class RobotBase {
 	public void GyroToAngle(Inputs inputs, Gyro gyro){
 		double dRelativeGyroBearing = gyro.getGyroRelativeBearing();
 		double dDiff = dRelativeGyroBearing - inputs.dRequestedBearing;
+		dGyroDeflectionPower = 0.0;
 
 		SmartDashboard.putNumber("RB Gyro Rel Bear",  dRelativeGyroBearing);
 		SmartDashboard.putNumber("RB Bearing dDiff", dDiff);
 		SmartDashboard.putNumber("RB Req Bearing", inputs.dRequestedBearing);
 
 			
-		if( Math.abs(dDiff) < 1.0){
+		if( Math.abs(dDiff) < dGyroSensitivity){
 			bIsOnGyroBearing = true;
 		} else {
 			bIsOnGyroBearing = false;
 		}
 
 		
-		if( bIsOnGyroBearing == false && (inputs.dRequestedBearing > -1.0 || inputs.bGyroNavigate == true) ){
+		if( inputs.dRequestedBearing > -1.0 || inputs.iGyroRequest != Gyro.kGyro_None ){
 
 			if( inputs.dRequestedBearing == 270.0 ){
 				inputs.dRequestedBearing = -90.0;
 			}
 
-			double dAnglePorportion = -0.015;
-			double dMax = .35;
-			double dMin = .1;
 	
-			if( inputs.dDriverPower != 0.0 ){
-				dMax = .15;
-				dMin = .075;
-			}
+			//if( inputs.dDriverPower != 0.0 ){
+			//	dMax = .15;
+			//	dMin = .075;
+			//}
 	
-			inputs.dDriverTurn = dDiff * dAnglePorportion;	// turn porportionally
-			if(inputs.dDriverTurn > 0.0){
-				if(inputs.dDriverTurn > dMax ){
-					inputs.dDriverTurn = dMax; 
-				} else {
-					inputs.dDriverTurn = dMin;
+			dGyroDiffPower = dDiff * dCorrectAngleProportion;	// turn porportionally
+			dGyroDeflectionPower = dGyroDiffPower; 
+			if(Math.abs(dGyroDeflectionPower) > dCorrectAngleMax){
+				if( dGyroDeflectionPower > 0.0){
+					dGyroDeflectionPower = dCorrectAngleMax;
+				} else if( dGyroDeflectionPower < 0.0){
+					dGyroDeflectionPower = -dCorrectAngleMax; 
 				} 
-			} else if(inputs.dDriverTurn < 0.0) {
-				if(inputs.dDriverTurn < -dMax){
-					inputs.dDriverTurn = -dMax; 
-				} else {
-					inputs.dDriverTurn = -dMin;
-				}
+			} else if(Math.abs(dGyroDeflectionPower) < dCorrectAngleMin) {
+				if( dGyroDeflectionPower > 0.0){
+					dGyroDeflectionPower = dCorrectAngleMin;
+				} else if( dGyroDeflectionPower < 0.0){
+					dGyroDeflectionPower = -dCorrectAngleMin; 
+				} 
 			}
 
 		}
+	
 	}
 
 	public void SaveEncoderPosition(){
@@ -225,18 +235,29 @@ public class RobotBase {
 		//System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
-
 		
 			if( inputs.bRampPower == true){
 				inputs.dDriverPower = applyPower.RampPowerToEncoder(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
 										dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
-			}
-			System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
+	 		}
+			//System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
+			if(inputs.iGyroRequest == Gyro.kGyro_TurnTo){
+				inputs.dDriverPower = 0.0;
+				inputs.dDriverTurn = dGyroDeflectionPower;
+			}else if(inputs.iGyroRequest == Gyro.kGyro_Assist){
+				inputs.dDriverTurn += dGyroDeflectionPower;
+			}
 
 			dLeftDrivePower  = applyPower.getWheelPower(ApplyPower.k_iLeftRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
 			dRightDrivePower = applyPower.getWheelPower(ApplyPower.k_iRightRearDrive, inputs.dDriverPower, inputs.dDriverTurn);
 
+			
+			if(inputs.iGyroRequest == Gyro.kGyro_Correct){
+				if( Math.abs(inputs.dDriverPower) > 0.0){   // apply the dGyroDeflvctionPower to the non encoder motor die only
+					dRightDrivePower -= dGyroDeflectionPower;
+				}
+			}
 
 			motLeftDriveMotorA.set(ControlMode.PercentOutput, dLeftDrivePower );
 			motLeftDriveMotorB.set(ControlMode.PercentOutput, dLeftDrivePower );
@@ -287,13 +308,6 @@ public class RobotBase {
 		telem.addColumn("Dev Stop Compressor");
 		telem.addColumn("Dev Stop Drive Wheels");
 
-		telem.addColumn("IN Driver Power"); 
-		telem.addColumn("IN Driver Turn"); 
-		telem.addColumn("RB Left Drive Motor A"); 
-		telem.addColumn("RB Left Drive Motor B"); 
-		telem.addColumn("RB Rite Drive Motor A"); 
-		telem.addColumn("RB Rite Drive Motor B");
-
 		telem.addColumn("RB Compres Current");
 		telem.addColumn("RB Compres CL State");
 
@@ -302,11 +316,25 @@ public class RobotBase {
 		telem.addColumn("RB Tea Motor Power");
 		telem.addColumn("RB Tea Status");
 
+		telem.addColumn("IN Driver Power"); 
+		telem.addColumn("IN Driver Turn"); 
+		telem.addColumn("IN Gyro Request");
+		telem.addColumn("RB Left Drive Motor A"); 
+		telem.addColumn("RB Left Drive Motor B"); 
+		telem.addColumn("RB Rite Drive Motor A"); 
+		telem.addColumn("RB Rite Drive Motor B");
+		telem.addColumn("RB Gyro Diff Power");
+		telem.addColumn("RB Gyro Deflect Power");
+		telem.addColumn("GY On Bearing");
+
+
+
 		telem.addColumn("RB Ramp Power");
 		telem.addColumn("RB Enco Save Pos");
 		telem.addColumn("RB Enco Pos");
 		telem.addColumn("RB Enco Dist");
 		telem.addColumn("RB Enco Desired Distance");
+
 
 		gyro.addTelemetryHeaders(telem);
 		applyPower.addTelemetryHeaders(telem);
@@ -317,10 +345,14 @@ public class RobotBase {
 
 		telem.saveDouble("IN Driver Power", inputs.dDriverPower); 
 		telem.saveDouble("IN Driver Turn", inputs.dDriverTurn); 
+		telem.saveInteger("IN Gyro Request", inputs.iGyroRequest);
 		telem.saveDouble("RB Left Drive Motor A", this.motLeftDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Left Drive Motor B", this.motLeftDriveMotorB.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor A", this.motRightDriveMotorA.getMotorOutputPercent()); 
 		telem.saveDouble("RB Rite Drive Motor B", this.motRightDriveMotorB.getMotorOutputPercent());
+		telem.saveDouble("RB Gyro Diff Power", dGyroDiffPower);
+		telem.saveDouble("RB Gyro Deflect Power", dGyroDeflectionPower);
+		telem.saveTrueBoolean("GY On Bearing", this.bIsOnGyroBearing);
 
 		telem.saveDouble("RB Compres Current", this.mCompressor.getCompressorCurrent(),2);
 		telem.saveString("RB Compres CL State", sCompressorCLState);

@@ -16,6 +16,11 @@ public class Gyro {
 	double d_navxAngle, d_navxPitch, d_navxRoll, d_navxYaw;
 	double d_navxDisplacementX, d_navxDisplacementY, d_navxDisplacementZ;
 	
+	public final static int kGyro_None		= 0;
+	public final static int kGyro_TurnTo	= 1;
+	public final static int kGyro_Correct	= 2;
+	public final static int kGyro_Assist	= 3;
+
 	
 	// class Constructor initialize you variables here
     public Gyro() {
@@ -109,12 +114,11 @@ public class Gyro {
 	}
 
 	public void addTelemetryHeaders(LCTelemetry telem) {
-		telem.addColumn("G Bearing");
-
+		telem.addColumn("GY Bearing");
 	}
 
 	public void writeTelemetryValues(LCTelemetry telem) {
-		telem.saveDouble("G Bearing", this.getGyroRelativeBearing());
+		telem.saveDouble("GY Bearing", this.getGyroRelativeBearing());
 	}
 
 	// Show what variables we want to the SmartDashboard

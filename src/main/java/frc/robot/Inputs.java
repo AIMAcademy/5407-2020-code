@@ -77,7 +77,7 @@ public class Inputs {
 	int iHoodRequestedToPosition = 0;
 	double dRequestedBearing = 0.0;
 
-	boolean bGyroNavigate = false;
+	int iGyroRequest = Gyro.kGyro_None;
 	
 
 	// class Constructor initialize your variables here
@@ -132,11 +132,12 @@ public class Inputs {
     // This will read all the inputs, cook them and save them to the appropriate variables.
     public void readValues() {   
 
-		// set defaults for the base
+		// set defaults for the base and gyro
 		dTargetDistanceUsingEncoder = 0.0;
 		bRampPower = false;					// use to tell bas to ramp the power using the encoder
 		bSaveEncoderPosition = false;		// force to false so someone else can set it later
 		dRequestedBearing = -1.0;
+		iGyroRequest = Gyro.kGyro_None;
 
 		// set defaults for the shooter
 		bSpinUpShooter = false;				// force to false until we assign a button
@@ -202,7 +203,10 @@ public class Inputs {
 			}
 		}
 
-		bGyroNavigate = joyTestController.getTop();
+
+		if(joyTestController.getTop() == true){
+			iGyroRequest = Gyro.kGyro_Assist;
+		}
 		bRunAuton = joyTestController.getRawButton(11);
 		
 		//temp = convertJoystickAxisToValueRange( joyTestController.getTwist(), 100 ) ; // force to + value only

@@ -280,12 +280,12 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("bearing")){// change the gyro bearing
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
-          inputs.bGyroNavigate = true;                      //    tell gyro to go there
 
         } else if( autonStep.sAction.equals("distance")){// drive a specific encoder distance
             inputs.dTargetDistanceUsingEncoder = 
                                           autonStep.dValue; // tell downstream this is our target encoder distance 
             inputs.bRampPower = true;                       // tell downstream we want to ramp the power
+            inputs.iGyroRequest = Gyro.kGyro_Correct;       //    tell gyro to correct on non encoder side
 
         } else if( autonStep.sAction.equals("ingest")){	// test conditions for ingest
           if( autonStep.dValue == 0.0) {                    //    0.0 indicates to turn it off. 
@@ -311,7 +311,7 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("turnto")){
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
-          inputs.bGyroNavigate = true;                      //    tell gyro to go there
+          inputs.iGyroRequest = Gyro.kGyro_TurnTo;          //    tell gyro to spin to location
         }
     }
   }
@@ -343,12 +343,16 @@ public class ScriptedAuton{
           this.bStepIsComplete = true;             
         }
       } else if( autonStep.sAction.equals("turnto")){
-          if(robotbase.bIsOnGyroBearing == false){
-            timStepTimer.reset();
-          } else if( robotbase.bIsOnGyroBearing == true && timStepTimer.get() >.20){ 
+          if(robotbase.bIsOnGyroBearing == true){
             this.bStepIsComplete = true;  // are we on the right bearing
             System.out.println("Gyro On bearing: bStepIsComplete = true"); 
           }
+          //if(robotbase.bIsOnGyroBearing == false){
+          //  timStepTimer.reset();
+          //} else if( robotbase.bIsOnGyroBearing == true && timStepTimer.get() >.20){ 
+          //  this.bStepIsComplete = true;  // are we on the right bearing
+          //  System.out.println("Gyro On bearing: bStepIsComplete = true"); 
+          //}
       } else if( autonStep.sAction.equals("timer")){
           if(timStepTimer.get() > autonStep.dValue){      // is the step timer up 
             this.bStepIsComplete = true;

@@ -72,24 +72,26 @@ public class ApplyPower {
         dPctOfDistance = dCurrentDistance/dTargetDistance;      // pct of how far we traveled, always positive
 
         //if(dPctOfDistance > .95){                               // are we in the start up part
-        //    dCalculatedPower = dMinPower/2;
-        //}else 
-        //if(dPctOfDistance < dRampUpPoint){                // are we in the start up part   
-        //    dPCTOfPower = dPower * dPctOfDistance;              //      pct power over full distance. 
-        //    dCalculatedPower = dPCTOfPower/dRampUpPoint;        //      from beginning to ramp up point
-        if(Math.abs(dPctOfDistance) >= dRampDownPoint){            // are we in the end part
-            dCalculatedPower = dMinPower/2;        //      we are now at ramp down, subtrack overall pct from full power
+        //    dCalculatedPower = 0.0;
+        //}
+        //else 
+        /**
+        if(dPctOfDistance < dRampUpPoint){                // are we in the start up part   
+            dPCTOfPower = dPower * dPctOfDistance;              //      pct power over full distance. 
+            dCalculatedPower = dPCTOfPower/dRampUpPoint;        //      from beginning to ramp up point
+        }else if(Math.abs(dPctOfDistance) >= dRampDownPoint){            // are we in the end part
+            dCalculatedPower = (1-dPCTOfPower)/dRampDownPoint;        //      we are now at ramp down, subtrack overall pct from full power
         }
         //System.out.println(">>>>>AP MID dCalculatedPower: " + String.valueOf(dCalculatedPower));
 
         if( Math.abs(dCalculatedPower) < dMinPower){
             if( dCalculatedPower > 0.0  ){ 
                 dCalculatedPower = dMinPower;
-           } else if( dCalculatedPower < 0.0 ){
-                dCalculatedPower = -dMinPower;
+            } else if( dCalculatedPower < 0.0 ){
+            dCalculatedPower = -dMinPower;
             }
         }
-
+        **/
         //System.out.println(">>>>>AP OUT dCalculatedPower: " + String.valueOf(dCalculatedPower));
         return dCalculatedPower;
 
