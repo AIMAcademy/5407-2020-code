@@ -49,7 +49,46 @@ public class ApplyPower {
 		dRampDownPoint = config.getDouble("applypower.dRampDownPoint",.8);
 
 	}
-		
+        
+    public double getServoPower( double dRequestedPower, double dDeadBand, boolean bInvert){
+		/** Convert requested power in range 1.0 to -1.0 to the servo range 
+		 * This Servo motor is a continuois turn servo
+		 * deadband we set at .2/-.2 up above 
+		 * Range greater than .5 is up
+		 * 		  .5 =  stop
+		 * 		 less than .5 is down 
+		 * We will pass the joystick power and modify the fit the
+		 * new range for the servo.  
+		 * */
+
+        double temp = dRequestedPower;
+        
+		if( Math.abs(temp) < dDeadBand ){			// dead band to prevent accidental hits
+			temp = 0.0;
+        }
+        
+		//temp = temp * Math.abs(temp*temp);			// dsensitizie the lower end .5 stop.
+
+		temp += 1.0;								// shift from 1.0 / -1.0 to 2.0 / 0.0
+		temp /= 2;									// shift from 2.0 / 0.0 to 1.0 / 0.0, 
+		dRequestedPower = temp;			            // save result 
+	
+		/** Range is now set 0.0 to 1.0.  .5 is stop.
+		 * But 0.0 is up and 1.0 is down. 
+		 * We may need to flip it so 1.0 is up and 0.0 is down
+		 * It is a servo so we cannot just use motor invert 
+		 **/
+        if( bInvert == true){
+            dRequestedPower -= .5;  	    // subtract the mid point .5. Convert from 0.0/1.0 to -.5/.5
+            dRequestedPower *= -1;	        // now we can invert. Converts from -.5/5 to .5/-.5 	
+            dRequestedPower += .5;	        // now add back .5   .5/-.5 becomes 1.0/0.0 which is what we want.
+        }
+
+		return( dRequestedPower);
+
+    }
+
+
     public double getEncoderDistance(String sEncoderName, Double dCurrentLocation){
 
         //Double dStartLocation = mapEncoderValues.getOrDefault(sEncoderName, Double.valueOf(k_dCalculatedError));
@@ -70,6 +109,7 @@ public class ApplyPower {
         dCalculatedPower = dPower;                              // default this in case of no changes 
         //System.out.println(">>>>>AP IN  dCalculatedPower: " + String.valueOf(dCalculatedPower));
         dPctOfDistance = dCurrentDistance/dTargetDistance;      // pct of how far we traveled, always positive
+        dPCTOfPower = dPower * dPctOfDistance;                  //      pct power over full distance. 
 
         //if(dPctOfDistance > .95){                               // are we in the start up part
         //    dCalculatedPower = 0.0;
@@ -77,18 +117,17 @@ public class ApplyPower {
         //else 
         /**
         if(dPctOfDistance < dRampUpPoint){                // are we in the start up part   
-            dPCTOfPower = dPower * dPctOfDistance;              //      pct power over full distance. 
             dCalculatedPower = dPCTOfPower/dRampUpPoint;        //      from beginning to ramp up point
         }else if(Math.abs(dPctOfDistance) >= dRampDownPoint){            // are we in the end part
-            dCalculatedPower = (1-dPCTOfPower)/dRampDownPoint;        //      we are now at ramp down, subtrack overall pct from full power
+            dCalculatedPower = (1.0-dPCTOfPower)/dRampDownPoint;        //      we are now at ramp down, subtrack overall pct from full power
         }
         //System.out.println(">>>>>AP MID dCalculatedPower: " + String.valueOf(dCalculatedPower));
 
         if( Math.abs(dCalculatedPower) < dMinPower){
-            if( dCalculatedPower > 0.0  ){ 
+            if( dPower > 0.0  ){ 
                 dCalculatedPower = dMinPower;
-            } else if( dCalculatedPower < 0.0 ){
-            dCalculatedPower = -dMinPower;
+            } else if( dPower < 0.0 ){
+                dCalculatedPower = -dMinPower;
             }
         }
         **/

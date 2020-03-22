@@ -153,7 +153,7 @@ public class Robot extends TimedRobot {
     }
 
     limelight.update(inputs);
-    shooter.update(inputs,config);
+    shooter.update(inputs,config,limelight);
     robotbase.update(inputs);
     
     inputs.outputToDashboard(false);
@@ -183,5 +183,16 @@ public class Robot extends TimedRobot {
   @Override
   public void testPeriodic() {
 
+    inputs.readValues();
+    if( Math.abs(inputs.dShooterHoodPower) < .1){
+      inputs.dShooterHoodPower = 0.0;
+    }
+    double temp = inputs.dShooterHoodPower;
+
+    inputs.dShooterHoodPower = temp * Math.abs(temp*temp*temp);
+    SmartDashboard.putNumber("I Hood Req Pow",inputs.dShooterHoodPower);
+    shooter.motShooterHood.set(inputs.dShooterHoodPower );
+    System.out.println("Inputs Shooter Hood Power:" + String.valueOf(inputs.dShooterHoodPower));
+    
   }
 }

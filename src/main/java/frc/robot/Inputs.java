@@ -146,6 +146,7 @@ public class Inputs {
 		dRequestedCarouselPower = 0.0;
 
 		bShooterLaunch = joyTestController.getRawButton(9);
+		dShooterHoodPower = joyTestController.getY();
 
 		if(gamepadDriver.getBackButton() == true && gamepadOperator.getBackButton() == true){
 			bInEndGame = true;
@@ -219,8 +220,8 @@ public class Inputs {
 		//dRequestedVelocity = 0.0;
 
 		//temp =  convertJoystickAxisToValueRange( joyTestController.getTwist(), 1 ) ; // force to + value only
-		temp = joyTestController.getTwist();
-		dRequestedCameraPosition = temp;
+		//temp = joyTestController.getTwist();
+		//dRequestedCameraPosition = temp;
 
 		bShooterVelocitySaveSetting = joyTestController.getRawButtonPressed(11);
 
@@ -261,7 +262,7 @@ public class Inputs {
 		bShiftBaseToHigh= gamepadDriver.getBumper(Hand.kLeft);
 
 		// get axis and then it will be process in the shooter 
-		dShooterHoodPower = -gamepadOperator.getY(Hand.kRight); // Invert so 1 is up and -1 is down.
+		//dShooterHoodPower = -gamepadOperator.getY(Hand.kRight); // Invert so 1 is up and -1 is down.
 
 		// the end game is when we are ready to hang. Slower movements are better
 		if( bInEndGame == false){

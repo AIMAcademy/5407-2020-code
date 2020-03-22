@@ -2,16 +2,17 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.cscore.HttpCamera;
+import frc.robot.Limelight.LightMode;
+//import edu.wpi.cscore.HttpCamera;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.Solenoid;
+//import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+//import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 
 
@@ -46,6 +47,7 @@ public class Shooter {
 	boolean bUpToSpeed = false;
 
 
+	Timer timCameraSample = null;
 	Spark motPWMEPCCarousel = null;
 	double dFastCarouselPower = 0.7;
 	double dSlowCarouselPower = 0.2;
@@ -59,7 +61,7 @@ public class Shooter {
 	DigitalInput digEPCInTheWay = null;
 	boolean bEPCInTheWay = false;
 
-	Servo    motShooterHood = null;
+	Spark    motShooterHood = null;
 	AnalogInput anaShooterHood = null;
 	public static final double kShooterHood_Stop = .5; 
 	double dShooterHoodPower = .5;
@@ -73,13 +75,20 @@ public class Shooter {
 	double dEPCLifterPower = 0.0;
 	double dEPCLifterSpeed = 0.0;
 
+	String sCameraStatus = "";
 	double dCamera_TopStop = .401;
 	double dCamera_Store = .535;
 	double dCamera_Bar = .535;
 	double dCamera_CloseTargets = .472;
 	double dCamera_FarTargets = .456;
 	double dCamera_EPCView = .732;
-
+	double dCameraShootingPosition = 0.0;
+	boolean bDev_StopShooterSpinup = false;
+	double dCameraYAdjustment = 0.0;
+	double dCameraYOffset = 0.0;
+	double dCameraYOffsetMin = .0001;
+	double dCameraY = 0.0;
+	
 	boolean bLastShooterLaunch = false;             // what was the launch value last cycle.
 	
     /**
@@ -130,8 +139,12 @@ public class Shooter {
 
 
 		svoCamera = new Servo(RobotMap.kPWMPort_CameraServo);
+		svoCamera.setPosition(dCamera_Store);
+		sCameraStatus = "Stored";		
+		timCameraSample = new Timer();
+		timCameraSample.start();
 
-		motShooterHood = new Servo(RobotMap.kPWMPort_ShooterHoodMotor);
+		motShooterHood = new Spark(RobotMap.kPWMPort_ShooterHoodMotor);
 		anaShooterHood = new AnalogInput(RobotMap.kAnalogPort_ShooterHood);
 
 		System.out.println("Shooter constructor end...");
@@ -145,37 +158,102 @@ public class Shooter {
 	}
 	****/
 
+	private void CameraPositionAndSetup(Inputs inputs, Config config, Limelight limelight){
+
+		double dCameraPosition = dCamera_Store;
+		LightMode mCameraLEDMode = LightMode.eOff;
+		double dCameraCurrPosition = svoCamera.getPosition(); 
+
+		this.dCameraY = limelight.getTy();								// now move camers to correct Y position
+		this.dCameraYAdjustment = 0.0;
+
+		sCameraStatus = "---";
+		//dCameraShootingPosition
+
+		if(inputs.dRequestedCameraPosition > 0.0){
+			dCameraPosition = inputs.dRequestedCameraPosition;
+
+		}else if(inputs.bInEndGame == true) {
+			dCameraPosition = dCamera_Bar;
+			sCameraStatus = "Bar";
+			mCameraLEDMode = LightMode.eOff;
+
+		} else if(inputs.bIntakeIn == true) {
+			dCameraPosition = dCamera_EPCView;
+			sCameraStatus = "EPC View";
+			mCameraLEDMode = LightMode.eOn;
+
+		} else if(inputs.bShooterLaunch == true){
+			dCameraPosition = dCameraCurrPosition;							// don't move camera if we are shooting
+			mCameraLEDMode = LightMode.eOn;
+
+		} else if( inputs.bTargetting == true && inputs.bShooterLaunch == false ){
+			mCameraLEDMode = LightMode.eOn;
+			// set limelight pipeline
+
+			if( limelight.isTarget() == false ){								// we do not see target
+				timCameraSample.reset();									// no target so reset the timer
+
+				if(inputs.bCloseTargets == true){							// position where operator tells us
+					dCameraPosition = dCamera_CloseTargets;
+					sCameraStatus = "Close Targets";
+				} else if(inputs.bFarTargets == true) {
+					dCameraPosition = dCamera_FarTargets;
+					sCameraStatus = "Far Targets";
+				}
+			
+			}else if( limelight.isTarget() == true ){						// we see a target
+
+				this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;
+
+				if( Math.abs(this.dCameraYAdjustment) < dCameraYOffsetMin ){
+					if(this.dCameraYAdjustment > 0.0){
+						this.dCameraYAdjustment =  dCameraYOffsetMin;
+					} else {
+						this.dCameraYAdjustment =  -dCameraYOffsetMin;
+					}
+				}
 
 
-	public void update(final Inputs inputs, final Config config) {
+				if( Math.abs(this.dCameraY) <= .4 ){								// within +.5 or -.5 degrees of target
+					dCameraPosition = dCameraCurrPosition;				//keep current position
+					sCameraStatus = "Y Locked";
+				} else {
+					dCameraPosition = dCameraCurrPosition + this.dCameraYAdjustment;	// add Y to move down
+
+					if(this.dCameraY > 0.0){ 
+						sCameraStatus = "Too High";
+					} else if(this.dCameraY < 0.0){ 
+						sCameraStatus = "Too Low";
+					}
+				} 
+
+			}
+		}
+
+		if(dCameraPosition < dCamera_TopStop ){			// camera stops
+			dCameraPosition = dCamera_TopStop;
+			sCameraStatus = "Top Stop";
+		} else if( dCameraPosition > dCamera_EPCView ){  // flipped around to look for EPC (Balls)
+			dCameraPosition = dCamera_EPCView;
+			sCameraStatus = "Bottom Stop";
+		}
+				
+		svoCamera.setPosition(dCameraPosition);
+		limelight.setLedMode(mCameraLEDMode);
+
+	}
+
+	public void update(final Inputs inputs, final Config config, Limelight limelight) {
 
 		dEPCLifterPower = 0.0;
 
-		if(inputs.dRequestedCameraPosition > 0.0){
-			if(inputs.dRequestedCameraPosition < dCamera_TopStop ){			// camera stops
-				inputs.dRequestedCameraPosition = dCamera_TopStop;
-			} else if( inputs.dRequestedCameraPosition > dCamera_EPCView ){  // flipped around to look for EPC (Balls)
-				inputs.dRequestedCameraPosition = dCamera_EPCView;
-			}
-			
-			svoCamera.set(inputs.dRequestedCameraPosition);
-
-		} else {
-			if(inputs.bCloseTargets == true){
-				svoCamera.set(dCamera_CloseTargets);
-			} else if(inputs.bFarTargets == true) {
-				svoCamera.set(dCamera_FarTargets);
-			} else if(inputs.bInEndGame == true) {
-				svoCamera.set(dCamera_Bar);
-			} else if(inputs.bIntakeIn == true) {
-				svoCamera.set(dCamera_EPCView);
-			} 
-		}
+		CameraPositionAndSetup(inputs, config, limelight);
 		
-		if(inputs.bTargetting == false && bLastShooterLaunch == false ){
-			inputs.dRequestedVelocity = 0.0;
-			this.updateShooterVelocity(inputs);							// spinn the shootr wheel
-		}
+		//if(inputs.bTargetting == false && bLastShooterLaunch == false ){
+		//	//inputs.dRequestedVelocity = 0.0;
+		//	this.updateShooterVelocity(inputs);							// spinn the shootr wheel
+		//}
 
 		if(inputs.bTargetting == true && inputs.bShooterLaunch == false){
 			if( inputs.dRequestedVelocity == 0.0 ){
@@ -232,6 +310,7 @@ public class Shooter {
 
 	public void loadConfig(Config config) {
 
+		bDev_StopShooterSpinup = config.getBoolean("shooter.bDev_StopShooterSpinup", false); 
 		dPid_Proportional = config.getDouble("shooter.dPID_P", 0.731);
 		dPid_Integral = config.getDouble("shooter.dPID_I", 0.0008);
 		dPid_Derivative = config.getDouble("shooter.dPID_D", 7.0);
@@ -249,6 +328,9 @@ public class Shooter {
 		dCamera_CloseTargets = config.getDouble("shooter.dCamera_CloseTargets", .472);
 		dCamera_FarTargets 	 = config.getDouble("shooter.dCamera_FarTargets", .456);
 		dCamera_EPCView 	 = config.getDouble("shooter.dCamera_EPCView", .732);
+
+		dCameraYOffsetMin 	 = config.getDouble("shooter.dCameraYOffsetMin", .0001); 
+		dCameraYOffset	 	 = config.getDouble("shooter.dCameraYOffset", .0002); 
 	
 		dEPCLifterSpeed      = config.getDouble("shooter.dEPCLifterSpeed", .7);
 		dSlowCarouselPower	 = config.getDouble("shooter.dSlowCarouselPower", .2);
@@ -282,11 +364,16 @@ public class Shooter {
 	public void updateShooterVelocity(final Inputs inputs) {
 
 		dCLError = motCANShooterMotorRight.getClosedLoopError();
-
-		dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;
-
 		sCLStatus = "Stopped";
 		bUpToSpeed = false;
+
+		if (bDev_StopShooterSpinup == true){
+			dRequestedPct = 0.0;
+			sCLStatus = "Dev Stop";
+			return;
+		}
+
+		dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;   // max at .75 power level
 	
 		if( inputs.dRequestedVelocity  < 15000) {
 			bInClosedLoopMode = false;
@@ -294,6 +381,7 @@ public class Shooter {
 			motCANShooterMotorRight.set(ControlMode.PercentOutput, -dRequestedPct);
 			double dRightPCT = motCANShooterMotorRight.getMotorOutputPercent();
 			motCANShooterMotorLeft.set(ControlMode.PercentOutput, -dRightPCT);
+
 		} else { 
 
 			bInClosedLoopMode = true;
@@ -331,24 +419,15 @@ public class Shooter {
 		}
 	}
 
-
-
-	private void Targetting( Inputs inputs){
-
-		//int iRequestedTicks = 0;
-
-
-		//if( Math.abs(ty) > .5){
-		//	iRequestedTicks = (int) ( ty * (double) iTurretTicksPerDegree);
-		//	inputs.iTurretRequestedToPosition = iTurretPosition - iRequestedTicks; 
-		//}
-
-	}
-
-	private void HoodPosition( Inputs inputs){
+	public void HoodPosition( Inputs inputs){
 
 		iShooterHoodPosition = anaShooterHood.getAverageValue();
-		inputs.iHoodRequestedToPosition = iShooterHoodBottom + 40;
+		
+		motShooterHood.set(inputs.dShooterHoodPower);
+
+
+		/**
+		inputs.iHoodRequestedPower = iShooterHoodBottom + 40;
 
 		if( Math.abs(inputs.dHoodPower) < .2 ){					// dead band to prevent accidental hits
 			inputs.dHoodPower = 0.0;
@@ -389,38 +468,7 @@ public class Shooter {
 			sHoodStatus = "Full Down";
 			inputs.dHoodPower = 0.0;
 		}
-
-		/** Convert requested power in range 1.0 to -1.0 to the servo range 
-		 * This Hood motor is a continuois turn servo
-		 * deadband we set at .2/-.2 up above 
-		 * Range greater than .5 is up
-		 * 		  .5 =  stop
-		 * 		 less than .5 is down 
-		 * We will pass the joystick power and modify the fit the
-		 * new range for the servo.  
-		 * */
-
-		
-		double temp = inputs.dShooterHoodPower;	// save current power
-		if( Math.abs(temp) < .2 ){					// dead band to prevent accidental hits
-			temp = 0.0;
-		}
-		temp = temp * Math.abs(temp*temp);			// dsensitizie the lower end .5 stop.
-
-		temp += 1.0;								// shift from 1.0 / -1.0 to 2.0 / 0.0
-		temp /= 2;									// shift from 2.0 / 0.0 to 1.0 / 0.0, 
-		this.dShooterHoodPower = temp;			// save result to local variable to save in telem and display
-	
-		/** Range is now set 0.0 to 1.0.  .5 is stop.
-		 * But 0.0 is up and 1.0 is down. 
-		 * We need to flip it so 1.0 is up and 0.0 is down
-		 * It is a servo so we cannot just use motor invert 
-		 **/
-		this.dShooterHoodPower -= .5;  	// subtract the mid point .5. Convert from 0.0/1.0 to -.5/.5
-		this.dShooterHoodPower *= -1;	// now we can invert. Converts from -.5/5 to .5/-.5 	
-		this.dShooterHoodPower += .5;	// now add back .5   .5/-.5 becomes 1.0/0.0 which is what we want.
-
-		motShooterHood.set(this.dShooterHoodPower);
+		**/
 
 
 	}
@@ -441,6 +489,13 @@ public class Shooter {
 		telem.addColumn("Sh On Target");
 		telem.addColumn("Sh Up To Speed");
 		telem.addColumn("Sh EPC In Way");
+		telem.addColumn("IN Camera Req Pos" );
+		telem.addColumn("Sh Camera Power");
+		telem.addColumn("Sh Camera Status");
+		telem.addColumn("Sh Camera Timer");
+		telem.addColumn("Sh Camera Y");
+		telem.addColumn("Sh Camera Y Adjust");
+		telem.addColumn("Sh Camera Y Offset");
 
 		
 		fireseq.addTelemetryHeaders(telem);		// do these here as we have access to telem
@@ -452,6 +507,14 @@ public class Shooter {
 		telem.saveDouble("Sh CL PID I", dPid_Integral, 6 );  // need more decimals here, default = 2
 		telem.saveDouble("Sh CL PID D", dPid_Derivative, 6 );
 		telem.saveDouble("Sh CL PID F", dPid_FeedForward, 6 );
+
+		telem.saveDouble("IN Camera Req Pos", inputs.dRequestedCameraPosition );
+		telem.saveDouble("Sh Camera Power", svoCamera.getPosition(), 6 );
+		telem.saveString("Sh Camera Status", sCameraStatus);
+		telem.saveDouble("Sh Camera Timer", timCameraSample.get());
+		telem.saveDouble("Sh Camera Y", this.dCameraY,6);
+		telem.saveDouble("Sh Camera Y Adjust", this.dCameraYAdjustment, 6);
+		telem.saveDouble("Sh Camera Y Offset", this.dCameraYOffset, 6);
 
 		if(bInClosedLoopMode){
 			telem.saveDouble("Sh CL Error", motCANShooterMotorRight.getClosedLoopError() );
@@ -490,7 +553,12 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh CL Req Pct", dRequestedPct);
 		SmartDashboard.putNumber("Sh Hood Pos", anaShooterHood.getAverageValue() );
 		SmartDashboard.putNumber("Sh EPC Lifter", motPWMEPCLifter.get() );
-		
+
+		SmartDashboard.putNumber("IN Camera Req Pos", inputs.dRequestedCameraPosition );
+		SmartDashboard.putNumber("Sh Camera Power", svoCamera.getPosition() );
+		SmartDashboard.putString("Sh Camera Status", sCameraStatus);
+
+
 		//SmartDashboard.putNumber("Sh Hood Pow", motS );
 	}
 }
