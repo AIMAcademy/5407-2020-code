@@ -58,6 +58,8 @@ public class Shooter {
 	FireSequence2 fireseq = null;
 	boolean bFireSequenceIsComplete = false;
 
+	ClearEPC clearepc = null;
+
 	DigitalInput digEPCInTheWay = null;
 	boolean bEPCInTheWay = false;
 
@@ -98,8 +100,10 @@ public class Shooter {
 		System.out.println("Shooter constructor init...");
 		inputs = mPassedInputs;
 
-		fireseq = new FireSequence2(this);  // do this here as this.loadConfig calls fireseq.loadconfig() 
+		fireseq = new FireSequence2(this);  // do this here as this.loadConfig calls fireseq.loadConfig() 
 		fireseq.reset();
+
+		clearepc = new ClearEPC();			// do this here before loadConfig is called this.loadConfig calls clearepc.loadConfig() 
 
 		loadConfig(config); // do this here to be sure we have the values updated before we used them.
 
@@ -248,6 +252,13 @@ public class Shooter {
 
 		dEPCLifterPower = 0.0;
 
+		//if (digEPCInTheWay.get() == false) {	//Device is set for normally closed, false if good circuit and no EPC
+		if (inputs.joyTestController.getRawButton(6) == false) {	//Device is set for normally closed, false if good circuit and no EPC
+			bEPCInTheWay = false;   			//Indicates we have a circuit, so it's set to false, no EPC
+		}else {
+			bEPCInTheWay = true;				//Indicates open circut, means EPC in the way or failed connection
+		}
+
 		CameraPositionAndSetup(inputs, config, limelight);
 		
 		//if(inputs.bTargetting == false && bLastShooterLaunch == false ){
@@ -337,13 +348,14 @@ public class Shooter {
 		dFastCarouselPower	 = config.getDouble("shooter.dFastCarouselPower", .7);
 
 		fireseq.loadConfig(config);
+		clearepc.loadConfig(config);
 
 	}
 
 	public boolean ClearTheEPCLifter(Inputs inputs){
 
 		if( this.bEPCInTheWay == true ){		// EPC (ball) is in the way
-			inputs.dRequestedCarouselPower = .15;
+			inputs.dRequestedCarouselPower = dSlowCarouselPower;
 			return this.bEPCInTheWay;			// return true
 		}
 
@@ -499,6 +511,7 @@ public class Shooter {
 
 		
 		fireseq.addTelemetryHeaders(telem);		// do these here as we have access to telem
+		clearepc.addTelemetryHeaders(telem);
 
 	}
 
@@ -529,6 +542,7 @@ public class Shooter {
 		telem.saveTrueBoolean("Sh EPC In Way", bEPCInTheWay);
 
 		fireseq.writeTelemetryValues(telem);			// do these here as we have access to telem
+		clearepc.writeTelemetryValues(telem);
 	}
 	
 	public void outputToDashboard(final boolean b_MinDisplay)  {
@@ -630,7 +644,7 @@ class FireSequence2{
 
 			case 1:										// check that there isn't an epc below the lifter
 				sState = "Clear EPCLifter";
-				if(shooter.bEPCInTheWay == true){
+				if(shooter.bEPCInTheWay == true){		// EPC is in the way
 					shooter.ClearTheEPCLifter(inputs);	
 				}else{
 					iNextStep= iStep + 1;				// no ball, go get one 

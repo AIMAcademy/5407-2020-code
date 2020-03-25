@@ -30,7 +30,7 @@ class RobotMap {
     public final static int kPCMPort_BallPusherUpper = 4;
 
    // Digital Inputs
-   public final static int kDigitalInPort_EPCInTheWay = 9;
+   public final static int kDigitalInPort_EPCInTheWay = 7;
 
    // Analog Inputs
    public final static int kAnalogPort_ShooterHood = 0;

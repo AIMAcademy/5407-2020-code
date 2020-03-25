@@ -183,16 +183,45 @@ public class Robot extends TimedRobot {
   @Override
   public void testPeriodic() {
 
-    inputs.readValues();
+    //inputs.readValues();
+    robotbase.mCompressor.enabled();
+    robotbase.mCompressor.setClosedLoopControl(true);
+
+    shooter.update(inputs, config, limelight);
+    /**
+    // Shooter Hood testing
     if( Math.abs(inputs.dShooterHoodPower) < .1){
       inputs.dShooterHoodPower = 0.0;
     }
     double temp = inputs.dShooterHoodPower;
 
     inputs.dShooterHoodPower = temp * Math.abs(temp*temp*temp);
-    SmartDashboard.putNumber("I Hood Req Pow",inputs.dShooterHoodPower);
     shooter.motShooterHood.set(inputs.dShooterHoodPower );
     System.out.println("Inputs Shooter Hood Power:" + String.valueOf(inputs.dShooterHoodPower));
+
+    **/
+
     
+    System.out.println("EPC: [" + String.valueOf(shooter.bEPCInTheWay) + "]  " + 
+                "State:" + shooter.clearepc.sState + "  "  + 
+                "Step:" + String.valueOf(shooter.clearepc.iStep)
+              );
+    
+    //sState = "Clear EPCLifter";
+
+
+    if( inputs.joyTestController.getRawButton(8) == true){
+      inputs.dRequestedCarouselPower = shooter.dSlowCarouselPower;
+    } else if ( inputs.joyTestController.getRawButton(9) == true ){
+      inputs.dRequestedCarouselPower = -shooter.dSlowCarouselPower;
+    } else if ( inputs.joyTestController.getRawButton(7) == true ){
+      shooter.clearepc.execute(inputs, shooter);	
+    } else {
+        inputs.dRequestedCarouselPower = 0.0;
+        shooter.clearepc.reset();
+    }
+
+    shooter.motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
+
   }
 }
