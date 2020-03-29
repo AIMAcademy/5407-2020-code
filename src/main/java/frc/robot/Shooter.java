@@ -21,7 +21,7 @@ public class Shooter {
 
 	// create your variables
 
-	ShooterVelocity shootvel = null;
+	ShooterTargetMap shoottargetmap = null;
 	TalonFX  motCANShooterMotorLeft = null;
 	TalonFX  motCANShooterMotorRight = null;
 	Servo    svoCamera = null;
@@ -54,7 +54,6 @@ public class Shooter {
 
 	Spark motPWMEPCLifter = null;
 
-
 	FireSequence2 fireseq = null;
 	boolean bFireSequenceIsComplete = false;
 
@@ -84,12 +83,14 @@ public class Shooter {
 	double dCamera_CloseTargets = .472;
 	double dCamera_FarTargets = .456;
 	double dCamera_EPCView = .732;
+
 	double dCameraShootingPosition = 0.0;
 	boolean bDev_StopShooterSpinup = false;
 	double dCameraYAdjustment = 0.0;
-	double dCameraYOffset = 0.0;
-	double dCameraYOffsetMin = .0001;
+	double dCameraYOffset = 0.0001;
+	double dCameraYOffsetMin = .0004;
 	double dCameraY = 0.0;
+	double dCameraClose = 3.0;
 	
 	boolean bLastShooterLaunch = false;             // what was the launch value last cycle.
 	
@@ -207,30 +208,47 @@ public class Shooter {
 				}
 			
 			}else if( limelight.isTarget() == true ){						// we see a target
+				
+				if( Math.abs(this.dCameraY) <= .25 ){						// within +.25 or -.25 degrees of target
+					dCameraPosition = dCameraCurrPosition;					//keep current position
+					sCameraStatus = "Y Locked";
+					return;
+				}
 
-				this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;
+				if(this.dCameraY > .25){ 
+					sCameraStatus = "Too High";
+				} else if(this.dCameraY < -.25){ 
+					sCameraStatus = "Too Low";
+				}
 
-				if( Math.abs(this.dCameraYAdjustment) < dCameraYOffsetMin ){
+
+				if( Math.abs(this.dCameraY) <= dCameraClose ){	    		// within +/- a few degrees of target
+					if( timCameraSample.get() < .10){						// use the timer to allow small changes
+						return;
+					} else {  										    	// reset the timer and the keep going here 
+						timCameraSample.reset();
+						this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
+					}
+				} else {
+					this.dCameraYAdjustment = this.dCameraY * .0001;  		// calc a proportional new position
+				}
+
+				
+				//this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
+				SmartDashboard.putNumber("Sh Camera Y Adjust init", this.dCameraYAdjustment );
+
+				if( Math.abs(dCameraYAdjustment) < dCameraYOffsetMin ){			// if abs of adj is < than min
 					if(this.dCameraYAdjustment > 0.0){
-						this.dCameraYAdjustment =  dCameraYOffsetMin;
+						this.dCameraYAdjustment =  dCameraYOffsetMin;			// adjust min for direction
 					} else {
-						this.dCameraYAdjustment =  -dCameraYOffsetMin;
+						this.dCameraYAdjustment = -dCameraYOffsetMin;			// adjust min for direction
 					}
 				}
 
 
-				if( Math.abs(this.dCameraY) <= .4 ){								// within +.5 or -.5 degrees of target
-					dCameraPosition = dCameraCurrPosition;				//keep current position
-					sCameraStatus = "Y Locked";
-				} else {
-					dCameraPosition = dCameraCurrPosition + this.dCameraYAdjustment;	// add Y to move down
+				SmartDashboard.putNumber("Sh Camera Y Adjust final", this.dCameraYAdjustment );
+				dCameraPosition = dCameraCurrPosition + this.dCameraYAdjustment;	// add to curr position to move +/- to 0.0 Y
 
-					if(this.dCameraY > 0.0){ 
-						sCameraStatus = "Too High";
-					} else if(this.dCameraY < 0.0){ 
-						sCameraStatus = "Too Low";
-					}
-				} 
 
 			}
 		}
@@ -340,8 +358,8 @@ public class Shooter {
 		dCamera_FarTargets 	 = config.getDouble("shooter.dCamera_FarTargets", .456);
 		dCamera_EPCView 	 = config.getDouble("shooter.dCamera_EPCView", .732);
 
-		dCameraYOffsetMin 	 = config.getDouble("shooter.dCameraYOffsetMin", .0001); 
-		dCameraYOffset	 	 = config.getDouble("shooter.dCameraYOffset", .0002); 
+		dCameraYOffsetMin 	 = config.getDouble("shooter.dCameraYOffsetMin", .0004); 
+		dCameraYOffset	 	 = config.getDouble("shooter.dCameraYOffset", .0001); 
 	
 		dEPCLifterSpeed      = config.getDouble("shooter.dEPCLifterSpeed", .7);
 		dSlowCarouselPower	 = config.getDouble("shooter.dSlowCarouselPower", .2);
@@ -570,7 +588,9 @@ public class Shooter {
 
 		SmartDashboard.putNumber("IN Camera Req Pos", inputs.dRequestedCameraPosition );
 		SmartDashboard.putNumber("Sh Camera Power", svoCamera.getPosition() );
+		SmartDashboard.putNumber("Sh Camera OSet Min", dCameraYOffsetMin );
 		SmartDashboard.putString("Sh Camera Status", sCameraStatus);
+		SmartDashboard.putBoolean("In End Game", inputs.bInEndGame);
 
 
 		//SmartDashboard.putNumber("Sh Hood Pow", motS );

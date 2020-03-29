@@ -268,9 +268,7 @@ public class Inputs {
 		if( bInEndGame == false){
 			dLeftWinchPower = 0.0;		// kill these as they should not be used until the end game. 
 			dRightWinchPower = 0.0;
-		}
-
-		if( bInEndGame == true){
+		} else if( bInEndGame == true){
 			dDriverPower *= .3;			// allow only small movements
 			dDriverTurn *= .3;
 			//bShooterHeightP = false;

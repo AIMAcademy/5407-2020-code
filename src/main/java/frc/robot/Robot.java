@@ -30,6 +30,7 @@ public class Robot extends TimedRobot {
   public final String LimelightHostname = "limelight";   // Limelight http camera feeds
   public HttpCamera limelightFeed;
   ScriptedAuton scriptedauton = null;  
+  private String sTestProcess = "none";
 
   /**
    * This function is run when the robot is first started up and should be
@@ -174,6 +175,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testInit(){
+
+    config.load();
+    String sTemp = config.getString("robot.sTestProcess", "none");
+    sTestProcess = sTemp.strip().toLowerCase().trim();
+
   }
 
 
@@ -183,45 +189,50 @@ public class Robot extends TimedRobot {
   @Override
   public void testPeriodic() {
 
-    //inputs.readValues();
-    robotbase.mCompressor.enabled();
-    robotbase.mCompressor.setClosedLoopControl(true);
-
+    inputs.readValues();
     shooter.update(inputs, config, limelight);
-    /**
-    // Shooter Hood testing
-    if( Math.abs(inputs.dShooterHoodPower) < .1){
-      inputs.dShooterHoodPower = 0.0;
-    }
-    double temp = inputs.dShooterHoodPower;
 
-    inputs.dShooterHoodPower = temp * Math.abs(temp*temp*temp);
-    shooter.motShooterHood.set(inputs.dShooterHoodPower );
-    System.out.println("Inputs Shooter Hood Power:" + String.valueOf(inputs.dShooterHoodPower));
+    if( sTestProcess.compareTo("hood") == 0 ){
 
-    **/
+      // Shooter Hood position testing
+      if( Math.abs(inputs.dShooterHoodPower) < .1){
+        inputs.dShooterHoodPower = 0.0;
+      }
+      double temp = inputs.dShooterHoodPower;
 
-    
-    System.out.println("EPC: [" + String.valueOf(shooter.bEPCInTheWay) + "]  " + 
+      inputs.dShooterHoodPower = temp * Math.abs(temp*temp*temp);
+      shooter.motShooterHood.set(inputs.dShooterHoodPower );
+      System.out.println("Inputs Shooter Hood Power:" + String.valueOf(inputs.dShooterHoodPower));
+      shooter.outputToDashboard(false);
+
+    } else if( sTestProcess.compareTo("clearepc") == 0 ){
+
+      robotbase.mCompressor.enabled();                  // using compressor power for EPC sensor
+      robotbase.mCompressor.setClosedLoopControl(true);
+  
+      System.out.println("EPC: [" + String.valueOf(shooter.bEPCInTheWay) + "]  " + 
                 "State:" + shooter.clearepc.sState + "  "  + 
                 "Step:" + String.valueOf(shooter.clearepc.iStep)
               );
     
-    //sState = "Clear EPCLifter";
+      if( inputs.joyTestController.getRawButton(8) == true){
+        inputs.dRequestedCarouselPower = shooter.dSlowCarouselPower;
+      } else if ( inputs.joyTestController.getRawButton(9) == true ){
+        inputs.dRequestedCarouselPower = -shooter.dSlowCarouselPower;
+      } else if ( inputs.joyTestController.getRawButton(7) == true ){
+        shooter.clearepc.execute(inputs, shooter);	
+      } else {
+          inputs.dRequestedCarouselPower = 0.0;
+          shooter.clearepc.reset();
+      }
 
+      shooter.motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
 
-    if( inputs.joyTestController.getRawButton(8) == true){
-      inputs.dRequestedCarouselPower = shooter.dSlowCarouselPower;
-    } else if ( inputs.joyTestController.getRawButton(9) == true ){
-      inputs.dRequestedCarouselPower = -shooter.dSlowCarouselPower;
-    } else if ( inputs.joyTestController.getRawButton(7) == true ){
-      shooter.clearepc.execute(inputs, shooter);	
     } else {
-        inputs.dRequestedCarouselPower = 0.0;
-        shooter.clearepc.reset();
+
+      System.out.println("sTestProcess: [" + String.valueOf(sTestProcess) + "]  " + 
+                "is set to default. No process defined in config file. "  );
+
     }
-
-    shooter.motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
-
   }
 }
