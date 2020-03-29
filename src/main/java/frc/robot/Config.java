@@ -105,8 +105,8 @@ public class Config {
     private Map<String, String> dictColumnData; /** This is a string key, value map. You put in the key and get the value. */ 
 	String s_FileName;
 	
-    public Config (String s_UserFileName){
-	    s_FileName = s_UserFileName;
+    public Config (String s_FilePath, String s_UserFileName){
+	    s_FileName =    s_FilePath + "/" + s_UserFileName;
 	    dictColumnData = new HashMap<String, String>();	// when we load we want to reload this too to clear out the old data
 	    load();
     }

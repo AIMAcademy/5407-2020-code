@@ -21,7 +21,7 @@ public class RobotBase {
 	Inputs inputs = null;
 	Config config = null;
 	ApplyPower applyPower = null;
-	//Limelight limelight = null;
+	Limelight limelight = null;
 
 	TalonFX motLeftDriveMotorA  = null;
 	TalonFX motLeftDriveMotorB  = null;
@@ -66,15 +66,17 @@ public class RobotBase {
 	double dEncoderDistance = 0.0;
 	public static final String k_sBaseMotorEncoderKey = "BaseMotorEncoder";
 
+	public boolean bBaseIsOnTarget = false;
+
     /**
      * This function is run when this class is first created used for any initialization code.
      */
-    public RobotBase(Config mPassedConfig, Inputs mPassedInputs) {
+    public RobotBase(Config mPassedConfig, Inputs mPassedInputs, Limelight mPassedLimelight) {
 		config = mPassedConfig;
 		loadConfig();
 
 		inputs = mPassedInputs;
-		//limelight = mPassedLimelight;
+		limelight = mPassedLimelight;
 
 		applyPower = new ApplyPower();			// get our own copy of this class
 						
@@ -206,7 +208,7 @@ public class RobotBase {
     /**
      * This function is run to update the output objects with data. 
      */
-    public void update(Inputs inputs){
+    public void update(){
     		
     	/* Motors on one side are flipped over (inverted) so that if we apply the + power the robot goes in what you consider forward.  
     	 * In the case below we flip the Right. If it turns out that your robot is going backwards then you
@@ -230,9 +232,14 @@ public class RobotBase {
 
 
 		if( inputs.bTargetting == false && inputs.bShooterLaunch == false){ // override gyro turning
-			GyroToAngle(inputs, gyro);
+			GyroToAngle(inputs, gyro);		// will only follow gyro if asked, go through to clean up gyro code
 		}
 		//System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
+
+		if( inputs.bTargetting == true && inputs.bShooterLaunch == false){ // only Target on X when targetting but not shooting
+			AlignOnCameraX();
+		}
+
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
 		
@@ -254,7 +261,7 @@ public class RobotBase {
 
 			
 			if(inputs.iGyroRequest == Gyro.kGyro_Correct){
-				if( Math.abs(inputs.dDriverPower) > 0.0){   // apply the dGyroDeflvctionPower to the non encoder motor die only
+				if( Math.abs(inputs.dDriverPower) > 0.0){   // apply the dGyroDeflvctionPower to the non encoder motor side only
 					dRightDrivePower -= dGyroDeflectionPower;
 				}
 			}
@@ -292,6 +299,43 @@ public class RobotBase {
 	}
 
 	
+	private void AlignOnCameraX(){
+
+		double dTx = limelight.getTx();
+
+		SmartDashboard.putNumber("RB LL TX",  dTx);
+		//SmartDashboard.putNumber("RB LL dDiff", dDiff);
+		//SmartDashboard.putNumber("RB LL X Request", inputs.dRequestedBearing);
+
+		bBaseIsOnTarget = true;
+		
+		if( Math.abs(dTx) < .5){
+			bBaseIsOnTarget = true;
+		} else {
+			bBaseIsOnTarget = false;
+
+			// is on target == false
+			double dMax = .35;
+			double dMin = .1;
+
+			double dAnglePorportion = .05;
+			inputs.dDriverTurn = dTx * dAnglePorportion;	// turn porportionally
+			if(inputs.dDriverTurn > 0.0){
+				if(inputs.dDriverTurn > dMax ){
+					inputs.dDriverTurn = dMax; 
+				} else {
+					inputs.dDriverTurn = dMin;
+				} 
+			} else if(inputs.dDriverTurn < 0.0) {
+				if(inputs.dDriverTurn < -dMax){
+					inputs.dDriverTurn = -dMax; 
+				} else {
+					inputs.dDriverTurn = -dMin;
+				}
+			}
+		}
+	}
+
 
 	public void allowCompressorToRun(boolean bDesiredState){
 

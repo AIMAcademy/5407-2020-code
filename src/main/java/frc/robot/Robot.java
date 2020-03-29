@@ -39,16 +39,13 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
 
-    config    = new Config("/home/lvuser/WPConfig_2020.cfg");  //init and open the config file
-       
-    telem     = new LCTelemetry();	
-    inputs    = new Inputs();			
-    shooter    = new Shooter(config, inputs);	// pass the config file here so that it has the configs to st up the shooter		
-    robotbase = new RobotBase(config,inputs);
-    limelight = new Limelight("limelight");
+    config        = new Config("/home/lvuser","WPConfig_2020.cfg");  //init and open the config file
+    telem         = new LCTelemetry("/home/lvuser","telemetry");	   // no extension needed
+    inputs        = new Inputs();			
+    limelight     = new Limelight("limelight");
 		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
-   
- 
+    shooter       = new Shooter(config, inputs);	// pass the config file here so that it has the configs to st up the shooter		
+    robotbase     = new RobotBase(config, inputs, limelight);
     scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt", telem, inputs, robotbase, shooter);   
    
     // add the telemetry fields for all parts
@@ -155,7 +152,7 @@ public class Robot extends TimedRobot {
 
     limelight.update(inputs);
     shooter.update(inputs,config,limelight);
-    robotbase.update(inputs);
+    robotbase.update();
     
     inputs.outputToDashboard(false);
     limelight.outputToDashboard(false);

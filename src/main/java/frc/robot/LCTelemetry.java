@@ -66,7 +66,7 @@ public class LCTelemetry {
 	 * Here the size of the arrays can be adjusted to allow for more columns
 	 * and more rows. The constants ki_MaxRos and ki_MaxColumns control that.
     */
-    public LCTelemetry() {
+    public LCTelemetry(String sPassedFilePath, String sPassedFileName ) {
     	tim_Time = new Timer();
     	tim_Time.start();
     	
@@ -76,8 +76,8 @@ public class LCTelemetry {
         dictColumnData = new HashMap<String, String>();
         driverStation = DriverStation.getInstance();
         bp_TimestampFile =  false;
-        sp_FilePath = "/home/lvuser";					/** /var/volatile/tmp folder. Lost after reboot, /home/lvuser is writable.*/
-        sp_FileName = "telemetry";
+        sp_FilePath = sPassedFilePath;					/** /var/volatile/tmp folder. Lost after reboot, /home/lvuser is writable.*/
+        sp_FileName = sPassedFileName;
         
         createNewList();
  
