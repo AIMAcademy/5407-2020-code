@@ -70,6 +70,8 @@ public class Inputs {
 	public boolean bFarTargets = false;
 
 	public boolean bRunAuton = false;
+	public boolean bSelectAuton = false;
+	public boolean bLastSelectAuton = false;
 
 	public boolean bInEndGame  = false;
 	double dMaxWinchPower = .65;
@@ -142,8 +144,8 @@ public class Inputs {
 		// set defaults for the shooter
 		bSpinUpShooter = false;				// force to false until we assign a button
 		iHoodRequestedToPosition = -1;      // force to -1 to indicate no requests.
-
 		dRequestedCarouselPower = 0.0;
+		dRequestedVelocity = 0.0;
 
 		bShooterLaunch = joyTestController.getRawButton(9);
 		dShooterHoodPower = joyTestController.getY();
@@ -242,6 +244,12 @@ public class Inputs {
 			bIntakeOut = true;									
 		}
 
+		// only used during disbaled periodic mode.
+		bSelectAuton = gamepadOperator.getYButtonPressed();
+		//if( gamepadOperator.getYButtonRelease() == true && bLastSelectAuton == false){  
+		//	bSelectAuton = true;
+		//}
+		//bLastSelectAuton = gamepadOperator.getYButton();
 
 		/**
 		 * Teainator up/down  processing

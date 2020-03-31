@@ -50,13 +50,14 @@ public class AutonStep{
 	  
 	  //System.out.println("sAction: [" + sAction + "]");
 	  if( sAction.equals("distance"))	return  true;
-	  if( sAction.equals("fire"))  		return  true;
 	  if( sAction.equals("bearing")) 	return  true;
 	  if( sAction.equals("high")) 		return  true;
 	  if( sAction.equals("ingest" )) 	return  true;
 	  if( sAction.equals("power"))  	return  true;
 	  if( sAction.equals("settle" ))  return  true;
+	  if( sAction.equals("shoot")) 		return  true;
 	  if( sAction.equals("spin" )) 		return  true;
+	  if( sAction.equals("target"))  	return  true;
 	  if( sAction.equals("timer"))  	return  true;
 	  if( sAction.equals("turnto" ))	return  true;
 	  

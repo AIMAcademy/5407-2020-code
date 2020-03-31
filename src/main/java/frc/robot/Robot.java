@@ -31,6 +31,9 @@ public class Robot extends TimedRobot {
   public HttpCamera limelightFeed;
   ScriptedAuton scriptedauton = null;  
   private String sTestProcess = "none";
+  boolean bTestIsDone = false;
+
+  int iSelectedAuton = 0;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -46,8 +49,8 @@ public class Robot extends TimedRobot {
 		limelightFeed = new HttpCamera(LimelightHostname, "http://limelight.local:5800/stream.mjpg");
     shooter       = new Shooter(config, inputs);	// pass the config file here so that it has the configs to st up the shooter		
     robotbase     = new RobotBase(config, inputs, limelight);
-    scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt", telem, inputs, robotbase, shooter);   
-   
+    scriptedauton = new ScriptedAuton("/home/lvuser", "AutonScript.txt", config, telem, inputs, robotbase, shooter); 
+    
     // add the telemetry fields for all parts
     inputs.addTelemetryHeaders( telem );
     shooter.addTelemetryHeaders( telem );
@@ -83,6 +86,12 @@ public class Robot extends TimedRobot {
   @Override
     public void disabledPeriodic() {
       inputs.readValues();
+
+      if( inputs.bSelectAuton == true ) {
+        scriptedauton.selectAuton();
+      }
+
+
       inputs.outputToDashboard(false);
       limelight.outputToDashboard(false);
       shooter.outputToDashboard(false);
@@ -117,7 +126,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
 
-    scriptedauton.execute( 1);
+    scriptedauton.execute();
 
   }
 
@@ -147,7 +156,7 @@ public class Robot extends TimedRobot {
     inputs.readValues();
 
     if( inputs.bRunAuton == true){
-      scriptedauton.execute(1);
+      scriptedauton.execute();
     }
 
     limelight.update(inputs);
@@ -185,6 +194,10 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void testPeriodic() {
+
+    if( bTestIsDone == true){
+      return;
+    }
 
     inputs.readValues();
     shooter.update(inputs, config, limelight);
@@ -225,11 +238,26 @@ public class Robot extends TimedRobot {
 
       shooter.motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
 
+    } else if(sTestProcess.compareTo("dumpmaps") == 0 ){
+
+      scriptedauton.dumpMap();
+      scriptedauton.dumpDecriptions();
+      System.out.println("******** Test is done ******************");
+      bTestIsDone = true;
+
+    } else if(sTestProcess.compareTo("selectauton") == 0 ){
+
+      scriptedauton.dumpMap();
+      scriptedauton.dumpDecriptions();
+      System.out.println("******** Test is done ******************");
+      bTestIsDone = true;
+
     } else {
 
       System.out.println("sTestProcess: [" + String.valueOf(sTestProcess) + "]  " + 
                 "is set to default. No process defined in config file. "  );
-
+                bTestIsDone = true;
+          
     }
   }
 }

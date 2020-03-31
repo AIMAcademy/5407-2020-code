@@ -72,6 +72,7 @@ public class Shooter {
 	int iShooterHoodPosition = 0;
 	String sHoodStatus = "---";
 	int iDiff = 0;
+	boolean bDev_StopShooterSpinup = false;
 
 	double dEPCLifterPower = 0.0;
 	double dEPCLifterSpeed = 0.0;
@@ -85,13 +86,13 @@ public class Shooter {
 	double dCamera_EPCView = .732;
 
 	double dCameraShootingPosition = 0.0;
-	boolean bDev_StopShooterSpinup = false;
 	double dCameraYAdjustment = 0.0;
 	double dCameraYOffset = 0.0001;
 	double dCameraYOffsetMin = .0004;
 	double dCameraY = 0.0;
 	double dCameraClose = 3.0;
-	
+	boolean bShooterOnTarget = false;
+
 	boolean bLastShooterLaunch = false;             // what was the launch value last cycle.
 	
     /**
@@ -127,19 +128,11 @@ public class Shooter {
 		motCANShooterMotorRight.configNominalOutputReverse(0, kTimeoutMs);
 		motCANShooterMotorRight.configPeakOutputForward(1.0, kTimeoutMs);
 		motCANShooterMotorRight.configPeakOutputReverse(-1.0, kTimeoutMs);
-		motCANShooterMotorRight.set(ControlMode.Velocity, 0.0);
+		motCANShooterMotorRight.set(ControlMode.PercentOutput, 0.0);
 
+		// left is a slave off of right
 		motCANShooterMotorLeft = new TalonFX(RobotMap.kCANId_ShooterMotorLeft);
 		motCANShooterMotorLeft.configFactoryDefault();
-		/* Config sensor used for Primary PID [Velocity] */
-		//motCANShooterMotorLeft.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor, kPIDLoopIdx, kTimeoutMs);
-		//motCANShooterMotorLeft.setSensorPhase(true);
-		//motCANShooterMotorLeft.configClosedloopRamp(0);  	// ramp up time so we do not cause a huge surge in current 
-		//motCANShooterMotorLeft.configNominalOutputForward(0, kTimeoutMs);
-		//motCANShooterMotorLeft.configNominalOutputReverse(0, kTimeoutMs);
-		//motCANShooterMotorLeft.set(ControlMode.Velocity, 0.0);
-		//motCANShooterMotorLeft.configPeakOutputForward(1.0, kTimeoutMs);
-		//motCANShooterMotorLeft.configPeakOutputReverse(-1.0, kTimeoutMs);
 		motCANShooterMotorLeft.set(ControlMode.PercentOutput, 0.0);
 
 
@@ -212,6 +205,7 @@ public class Shooter {
 				if( Math.abs(this.dCameraY) <= .25 ){						// within +.25 or -.25 degrees of target
 					dCameraPosition = dCameraCurrPosition;					//keep current position
 					sCameraStatus = "Y Locked";
+					bShooterOnTarget = true;
 					return;
 				}
 
@@ -269,12 +263,20 @@ public class Shooter {
 	public void update(final Inputs inputs, final Config config, Limelight limelight) {
 
 		dEPCLifterPower = 0.0;
+		bShooterOnTarget = false;
 
+		
 		//if (digEPCInTheWay.get() == false) {	//Device is set for normally closed, false if good circuit and no EPC
 		if (inputs.joyTestController.getRawButton(6) == false) {	//Device is set for normally closed, false if good circuit and no EPC
 			bEPCInTheWay = false;   			//Indicates we have a circuit, so it's set to false, no EPC
 		}else {
 			bEPCInTheWay = true;				//Indicates open circut, means EPC in the way or failed connection
+		}
+
+		if(inputs.bTargetting == false && inputs.bShooterLaunch == false ){
+			inputs.dRequestedVelocity = 0.0;
+			motCANShooterMotorRight.set(ControlMode.PercentOutput, 0.0);
+			motCANShooterMotorLeft.set(ControlMode.PercentOutput, 0.0);
 		}
 
 		CameraPositionAndSetup(inputs, config, limelight);
@@ -295,7 +297,7 @@ public class Shooter {
 		if( bLastShooterLaunch == false ){
 				fireseq.reset();
 		}
-
+		
 		if(inputs.bShooterLaunch == true){
 
 			if( inputs.dRequestedVelocity == 0.0 ){
@@ -305,14 +307,13 @@ public class Shooter {
 			this.updateShooterVelocity(inputs);							// spinn the shootr whee
 
 			fireseq.execute(inputs); //  this refers to the shooter itself. 
-		} else {
-
-			fireseq.reset();
 
 		}
 
-		motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
+		bLastShooterLaunch = inputs.bShooterLaunch;
 
+		motPWMEPCCarousel.set(inputs.dRequestedCarouselPower);
+		motPWMEPCLifter.set( dEPCLifterPower );			   	//Start wheel to push balls up
 
 			// read the sensors so we all have them now
 			//iShooterHoodPosition = anaShooterHood.getAverageValue();
@@ -391,11 +392,12 @@ public class Shooter {
 		motCANShooterMotorRight.config_IntegralZone(kPIDLoopIdx, iPid_IntegralZone);
 	}
 
-	public void updateShooterVelocity(final Inputs inputs) {
+	public void updateShooterVelocity(Inputs inputs) {
 
 		dCLError = motCANShooterMotorRight.getClosedLoopError();
 		sCLStatus = "Stopped";
 		bUpToSpeed = false;
+
 
 		if (bDev_StopShooterSpinup == true){
 			dRequestedPct = 0.0;
@@ -403,9 +405,16 @@ public class Shooter {
 			return;
 		}
 
-		dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;   // max at .75 power level
+		if( inputs.dRequestedVelocity == 0.0 ){
+			sCLStatus = "0.0 Req Velocity";
+			dRequestedPct = 0.0;
+			motCANShooterMotorRight.set(ControlMode.PercentOutput, dRequestedPct);
+			motCANShooterMotorLeft.set(ControlMode.PercentOutput, dRequestedPct);
+			return;
+		}
 	
-		if( inputs.dRequestedVelocity  < 15000) {
+		if( Math.abs(inputs.dRequestedVelocity)  < 15000) {
+			dRequestedPct = (.75 * inputs.dRequestedVelocity)/d75PctVelocity;   // max at .75 power level
 			bInClosedLoopMode = false;
 			sCLStatus = "PCTMode";
 			motCANShooterMotorRight.set(ControlMode.PercentOutput, -dRequestedPct);
@@ -441,11 +450,13 @@ public class Shooter {
 	}
 
 	private void SetShooterSpeed( Inputs inputs){
-		if( inputs.bCloseTargets == true){
-			inputs.dRequestedVelocity = 10000;
-		}
 		if( inputs.bFarTargets == true){
 			inputs.dRequestedVelocity = 14000;
+			inputs.bCloseTargets = false;
+		} else {
+			inputs.dRequestedVelocity = 10000;
+			inputs.bCloseTargets = true;
+			inputs.bFarTargets = false;
 		}
 	}
 
@@ -514,9 +525,8 @@ public class Shooter {
 		telem.addColumn("Sh CL Sen Vel");
 		telem.addColumn("Sh CL Target Vel");
 		telem.addColumn("IN Shooter Launch");
-		telem.addColumn("Sh Hood");
+		telem.addColumn("Sh Carousel Power");
 		telem.addColumn("Sh Hood Power");
-		telem.addColumn("Sh On Target");
 		telem.addColumn("Sh Up To Speed");
 		telem.addColumn("Sh EPC In Way");
 		telem.addColumn("IN Camera Req Pos" );
@@ -526,6 +536,7 @@ public class Shooter {
 		telem.addColumn("Sh Camera Y");
 		telem.addColumn("Sh Camera Y Adjust");
 		telem.addColumn("Sh Camera Y Offset");
+		telem.addColumn("Sh On Target");
 
 		
 		fireseq.addTelemetryHeaders(telem);		// do these here as we have access to telem
@@ -546,6 +557,8 @@ public class Shooter {
 		telem.saveDouble("Sh Camera Y", this.dCameraY,6);
 		telem.saveDouble("Sh Camera Y Adjust", this.dCameraYAdjustment, 6);
 		telem.saveDouble("Sh Camera Y Offset", this.dCameraYOffset, 6);
+		telem.saveTrueBoolean("Sh On Target", bShooterOnTarget );
+
 
 		if(bInClosedLoopMode){
 			telem.saveDouble("Sh CL Error", motCANShooterMotorRight.getClosedLoopError() );
@@ -553,6 +566,7 @@ public class Shooter {
 			telem.saveDouble("Sh CL Target Vel", motCANShooterMotorRight.getClosedLoopTarget());
 		}
 
+		telem.saveDouble("Sh Carousel Power", this.motPWMEPCCarousel.get());
 		telem.saveDouble("Sh Hood Power", this.dShooterHoodPower);
 		telem.saveDouble("Sh Hood Posit", this.iShooterHoodPosition);
 		telem.saveTrueBoolean("In Shooter Launch", inputs.bShooterLaunch);
@@ -590,6 +604,7 @@ public class Shooter {
 		SmartDashboard.putNumber("Sh Camera Power", svoCamera.getPosition() );
 		SmartDashboard.putNumber("Sh Camera OSet Min", dCameraYOffsetMin );
 		SmartDashboard.putString("Sh Camera Status", sCameraStatus);
+		SmartDashboard.putBoolean("Sh On Target", bShooterOnTarget );
 		SmartDashboard.putBoolean("In End Game", inputs.bInEndGame);
 
 
@@ -663,12 +678,13 @@ class FireSequence2{
 				break;
 
 			case 1:										// check that there isn't an epc below the lifter
+				iNextStep = iStep+1;
 				sState = "Clear EPCLifter";
-				if(shooter.bEPCInTheWay == true){		// EPC is in the way
-					shooter.ClearTheEPCLifter(inputs);	
-				}else{
-					iNextStep= iStep + 1;				// no ball, go get one 
-				}
+				//if(shooter.bEPCInTheWay == true){		// EPC is in the way
+				//	shooter.ClearTheEPCLifter(inputs);	
+				//}else{
+				//	iNextStep= iStep + 1;				// no ball, go get one 
+				//}
 
 				break;
 
@@ -684,6 +700,7 @@ class FireSequence2{
 
 			case 3:
 				sState = "Spin Carousel";
+				shooter.dEPCLifterPower = shooter.dEPCLifterSpeed;   	//Start wheel to push balls up
 				if( inputs.bCloseTargets == true){
 					inputs.dRequestedCarouselPower = shooter.dFastCarouselPower;
 				} else if( inputs.bFarTargets == true ){
