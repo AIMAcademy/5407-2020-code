@@ -87,9 +87,9 @@ public class Robot extends TimedRobot {
     public void disabledPeriodic() {
       inputs.readValues();
 
-      if( inputs.bSelectAuton == true ) {
-        scriptedauton.selectAuton();
-      }
+      if( inputs.bSelectAuton == true ) {             // during disabled mode before auton
+        scriptedauton.selectAuton();                  // allow operator to toggle through auton options
+      }                                               // options are visable in the scriptauton dashboard outputs
 
 
       inputs.outputToDashboard(false);
@@ -102,22 +102,14 @@ public class Robot extends TimedRobot {
 
 
 
+  
   /**
-   * This autonomous (along with the chooser code above) shows how to select
-   * between different autonomous modes using the dashboard. The sendable
-   * chooser code works with the Java SmartDashboard. If you prefer the
-   * LabVIEW Dashboard, remove all of the chooser code and uncomment the
-   * getString line to get the auto name from the text box below the Gyro
-   *
-   * <p>You can add additional auto modes by adding additional comparisons to
-   * the switch structure below with additional strings. If using the
-   * SendableChooser make sure to add them to the chooser code above as well.
+   * This function is called at the start of autonomous.
    */
   @Override
   public void autonomousInit() {
-    //m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    //System.out.println("Auto selected: " + m_autoSelected);
+    robotbase.gyro.zeroGyroBearing();
+    shooter.restart();                              // restart our timers fro shooting and targetting
   }
 
   /**
@@ -126,7 +118,27 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
 
+    inputs.readValues();
+
     scriptedauton.execute();
+
+    limelight.update(inputs);
+    shooter.update(inputs,config,limelight);
+    robotbase.update();
+    
+    inputs.outputToDashboard(false);
+    limelight.outputToDashboard(false);
+    shooter.outputToDashboard(false);
+    robotbase.outputToDashboard(false, inputs);
+    scriptedauton.outputToDashboard(false);
+    
+    inputs.writeTelemetryValues(telem);				// order does not matter
+    limelight.writeTelemetryValues(telem);
+    shooter.writeTelemetryValues(telem, inputs);
+    robotbase.writeTelemetryValues(telem, inputs);
+    scriptedauton.writeTelemetryValues(telem);
+    
+    telem.writeRow();					
 
   }
 
@@ -142,7 +154,10 @@ public class Robot extends TimedRobot {
     robotbase.SetDevModes();
     shooter.loadConfig(config);
     scriptedauton.loadScript();
+    scriptedauton.dumpMap();
+    scriptedauton.dumpDecriptions();
     
+    shooter.restart();                              // restart our timers fro shooting and targetting
     
     System.out.println("***** Teleop Init complete ********");
   
@@ -150,12 +165,13 @@ public class Robot extends TimedRobot {
 
   /**
    * This function is called periodically during operator control.
+   * This is called 50 times per second or every 20ms.
    */
   @Override
   public void teleopPeriodic() {
     inputs.readValues();
 
-    if( inputs.bRunAuton == true){
+    if( inputs.bRunAuton == true){        // allows us to test auton with beign in autom mode. 
       scriptedauton.execute();
     }
 
@@ -215,11 +231,14 @@ public class Robot extends TimedRobot {
       System.out.println("Inputs Shooter Hood Power:" + String.valueOf(inputs.dShooterHoodPower));
       shooter.outputToDashboard(false);
 
+    } else if( sTestProcess.compareTo("cameraclose") == 0 ){
+      shooter.svoCamera.set( shooter.dCamera_FarTargets);
+
     } else if( sTestProcess.compareTo("clearepc") == 0 ){
 
-      robotbase.mCompressor.enabled();                  // using compressor power for EPC sensor
-      robotbase.mCompressor.setClosedLoopControl(true);
-  
+      //robotbase.mCompressor.enabled();                  // using compressor power for EPC sensor
+      //robotbase.mCompressor.setClosedLoopControl(true);
+
       System.out.println("EPC: [" + String.valueOf(shooter.bEPCInTheWay) + "]  " + 
                 "State:" + shooter.clearepc.sState + "  "  + 
                 "Step:" + String.valueOf(shooter.clearepc.iStep)

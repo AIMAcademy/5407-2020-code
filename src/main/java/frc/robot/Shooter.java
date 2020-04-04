@@ -7,7 +7,6 @@ import frc.robot.Limelight.LightMode;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Servo;
-//import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
@@ -48,6 +47,7 @@ public class Shooter {
 
 
 	Timer timCameraSample = null;
+	Timer timTargettingDelay = null;
 	Spark motPWMEPCCarousel = null;
 	double dFastCarouselPower = 0.7;
 	double dSlowCarouselPower = 0.2;
@@ -84,6 +84,7 @@ public class Shooter {
 	double dCamera_CloseTargets = .472;
 	double dCamera_FarTargets = .456;
 	double dCamera_EPCView = .732;
+
 
 	double dCameraShootingPosition = 0.0;
 	double dCameraYAdjustment = 0.0;
@@ -137,10 +138,14 @@ public class Shooter {
 
 
 		svoCamera = new Servo(RobotMap.kPWMPort_CameraServo);
-		svoCamera.setPosition(dCamera_Store);
-		sCameraStatus = "Stored";		
+		svoCamera.setPosition(dCamera_FarTargets);		//dCamera_Store);
+		sCameraStatus = "Far";		
+		
 		timCameraSample = new Timer();
 		timCameraSample.start();
+
+		timTargettingDelay = new Timer();
+		timTargettingDelay.start();
 
 		motShooterHood = new Spark(RobotMap.kPWMPort_ShooterHoodMotor);
 		anaShooterHood = new AnalogInput(RobotMap.kAnalogPort_ShooterHood);
@@ -149,6 +154,13 @@ public class Shooter {
 
 	}
 
+	public void restart(){
+		timCameraSample.reset();
+		timTargettingDelay.reset();
+
+		svoCamera.setPosition(dCamera_FarTargets);		//dCamera_Store);
+		sCameraStatus = "Far";		
+	}
 	/****public void reloadTables(){
 
 		//shootvel.loadTable();
@@ -157,8 +169,7 @@ public class Shooter {
 	****/
 
 	private void CameraPositionAndSetup(Inputs inputs, Config config, Limelight limelight){
-
-		double dCameraPosition = dCamera_Store;
+		double dCameraPosition = dCamera_FarTargets;
 		LightMode mCameraLEDMode = LightMode.eOff;
 		double dCameraCurrPosition = svoCamera.getPosition(); 
 
@@ -166,7 +177,10 @@ public class Shooter {
 		this.dCameraYAdjustment = 0.0;
 
 		sCameraStatus = "---";
-		//dCameraShootingPosition
+
+		if(inputs.bTargetting == false){
+			timCameraSample.reset(); 
+		}
 
 		if(inputs.dRequestedCameraPosition > 0.0){
 			dCameraPosition = inputs.dRequestedCameraPosition;
@@ -187,18 +201,20 @@ public class Shooter {
 
 		} else if( inputs.bTargetting == true && inputs.bShooterLaunch == false ){
 			mCameraLEDMode = LightMode.eOn;
+
 			// set limelight pipeline
 
-			if( limelight.isTarget() == false ){								// we do not see target
+			if( limelight.isTarget() == false ) {								// we do not see target
 				timCameraSample.reset();									// no target so reset the timer
 
-				if(inputs.bCloseTargets == true){							// position where operator tells us
-					dCameraPosition = dCamera_CloseTargets;
-					sCameraStatus = "Close Targets";
-				} else if(inputs.bFarTargets == true) {
-					dCameraPosition = dCamera_FarTargets;
-					sCameraStatus = "Far Targets";
-				}
+				dCameraPosition = dCamera_FarTargets;
+				sCameraStatus = "Far Targets";
+				//if(inputs.bCloseTargets == true){							// position where operator tells us
+				//	dCameraPosition = dCamera_CloseTargets;
+				//	sCameraStatus = "Close Targets";
+				//} else if(inputs.bFarTargets == true) {
+				//	dCameraPosition = dCamera_FarTargets;
+				//}
 			
 			}else if( limelight.isTarget() == true ){						// we see a target
 				
@@ -215,6 +231,17 @@ public class Shooter {
 					sCameraStatus = "Too Low";
 				}
 
+				//if( timCameraSample.get() < .10){						// use the timer to allow small changes
+				//	return;
+				//}
+
+				//timCameraSample.reset();
+
+				//if( Math.abs(this.dCameraY) <= dCameraClose ){	    		// within +/- a few degrees of target
+				//	this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
+				//} else {
+				//	this.dCameraYAdjustment = this.dCameraY * .0001;  		// distance far, calc a proportional new position
+				//}
 
 				if( Math.abs(this.dCameraY) <= dCameraClose ){	    		// within +/- a few degrees of target
 					if( timCameraSample.get() < .10){						// use the timer to allow small changes
@@ -224,9 +251,8 @@ public class Shooter {
 						this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
 					}
 				} else {
-					this.dCameraYAdjustment = this.dCameraY * .0001;  		// calc a proportional new position
+					this.dCameraYAdjustment = this.dCameraY * .0001;  		// distance far, calc a proportional new position
 				}
-
 				
 				//this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
 				SmartDashboard.putNumber("Sh Camera Y Adjust init", this.dCameraYAdjustment );

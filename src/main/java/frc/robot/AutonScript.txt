@@ -58,15 +58,15 @@ auton 3   ***** test of disabled script
 
 auton 4 test shooting
     step 1 
-        Turnto  90     Turn to 90 degrees left
+        Turnto  90     Turn to 90 degrees right
 
-    step 1
+    step 2
         bearing    90 	  stay on 90
         distance 15000    drive certain encoder distance 
         power     .4      lower power  
 
-    step 2
+    step 3
         target 0	press the targetting button 0=close targets 
 
-    step 3
+    step 4
         shoot   0  	press the shoot button  0 required but ignored

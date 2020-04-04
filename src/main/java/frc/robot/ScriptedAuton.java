@@ -81,6 +81,8 @@ public class ScriptedAuton{
   private String sValue = "";
   private String sDesc = "";
 
+  public int iLoadErrors = 0;
+
   LCTelemetry telem = null;
   Inputs inputs = null;
   RobotBase robotbase = null;
@@ -91,6 +93,8 @@ public class ScriptedAuton{
   boolean bAutonComplete = false;
   public int    iSelectedAutonId = 0;
   public String sSelectedAutonDesc = "";
+  String sWhatCompleted = "";
+  public String sStepDesc = "";
   
 
   public TreeMap<String,String>   mapDescriptions  = new TreeMap<String,String>();         // list of descriptions
@@ -109,15 +113,15 @@ public class ScriptedAuton{
 
     sScriptFileName = sPassedFilePath + "/" + sPassedFileName;
     loadScript();
+    dumpMap();
     timStepTimer = new Timer();
     timStepTimer.start();
 
     iSelectedAutonId = config.getInt("scriptedauton.iSelectedAutonId", 0);
     sSelectedAutonDesc = getDescription(iSelectedAutonId);
     if( sSelectedAutonDesc.startsWith("*") == true  ){
+      sSelectedAutonDesc = "disabled auton [" + String.valueOf("iSelectedAutonId") +"] loaded from config, reset to 0.";
       iSelectedAutonId = 0;
-      sSelectedAutonDesc = "bad auton loaded from config";
-  
     }
 
  }
@@ -162,21 +166,31 @@ public class ScriptedAuton{
         // }
         //}
 
-        String[] sWords = sLine.trim().split("\\s+");
-        for( int i = 0; i<sWords.length; i++){
-          System.out.println( "  " + String.valueOf(i) + ": " + sWords[i] );
-        }
+        /**
+         * We are breaking up each line we read into words seperated by whitespace.
+         * Whitespace is anything between words or numbers that appears blank on the screen.
+         * This can be spaces, tabs(\t), carriage returns(\r), or newlines (\n).
+         * '\s' is escape for single whitespace. Unfortunately \ is also the escape symbol. 
+         * When used in a string declaration in code, if we use "\s" it means escape on lower case s. 
+         * Which means nothing. But if we use "\\s" then the "\\" converts to \. When we now add 
+         * that to 's' we get the whitespace nomenclature. If we use "\\s+", it means multiple white space.
+         * Here we use \\s+ becasue we do not know how many white spaces are between words.   
+        */
+        String[] sWords = sLine.trim().split("\\s+");       //trim removes the white space around the line before we split. 
+        //for( int i = 0; i<sWords.length; i++){
+        //  System.out.println( "  " + String.valueOf(i) + ": " + sWords[i] );
+        //}
 
         sVerb = sWords[0].strip().toLowerCase();
 
-		  if (sVerb.startsWith("auton") == true){							      // example:  auton 3 many following description words
+		    if (sVerb.startsWith("auton") == true){							    // example:  auton 3 many following description words
 
-          iAutonNumber = Integer.valueOf(sWords[1]);            // reset the others params on each new auton
+          iAutonNumber = Integer.valueOf(sWords[1]);            // reset the others params on start of each new auton
           iStepNumber = 0;
           iActionNumber = 0;
           iLastStepNumber = 0;
 
-          sDesc = buildDescription(sWords);                     // auton requires a description
+          sDesc = buildDescription(sWords);                     // auton REQUIRES a description
           if(sDesc.isEmpty() ){
             sDesc = "no description provided!!!!";              // no description so provide one
           }
@@ -224,8 +238,27 @@ public class ScriptedAuton{
       sSelectedAutonDesc = getDescription(iSelectedAutonId);
     }
 
+    if(iLoadErrors > 0){
+      System.err.println("****");
+      System.err.println("****");
+      System.err.println("****");
+      System.err.println("Warning: There were [" + String.valueOf(iLoadErrors) + "] in the Auton file." +
+                            " [" + this.sScriptFileName  + "].");
+      System.err.println("Warning: Your auton may not work as planned.");
+      System.err.println("****");
+      System.err.println("****");
+      System.err.println("****");
+    }
     reset();                  // all done reset
   }
+
+  /**
+   * Create a description from the words after the value. This will starting at words[2].
+   * This will ignore the forst 2 words which are the verb and the value.
+   * 
+   * @param words - array of words from the line.
+   * @return Combined description
+   */
 
   String buildDescription( String[] words){
 
@@ -233,7 +266,7 @@ public class ScriptedAuton{
 
     if( words.length > 2 ){
       try { 
-          for(int iIndex=2;words[iIndex] != null; iIndex++ ){
+          for(int iIndex=2; words[iIndex] != null; iIndex++ ){
             sTemp += words[iIndex] + " "; 
           }
       } catch( Exception e ){
@@ -305,6 +338,10 @@ public class ScriptedAuton{
       sValue, 				// Param
       sDesc);				// description
 
+    if(mAutonStep.bIsValid == false){
+      iLoadErrors++;
+    }
+
     String sKey = buildKey(iAutonNumber, iStepNumber, iActionNumber); 
 
     mapValues.put(sKey, mAutonStep);								// save to map as Distance, TargetData class
@@ -367,19 +404,19 @@ public class ScriptedAuton{
   
   
   public void reset(){
-
-    iStepNumber = 1;
+    iStepNumber = 0;
     iActionNumber = 0;
-    iLastStepNumber = 0;
-    iNextStepNumber = 1;
-
+    iLastStepNumber = -1;                             // must not be the same as iStepNumber
+    iNextStepNumber = 1;                              // we want it to got to this once it is set up. 
+    sStepDesc = "";
+    sWhatCompleted = "";
   }
   
   public void execute(){
 
-    this.telem.saveInteger("SA Auton Number", iSelectedAutonId);
+    sWhatCompleted = "";                                  // clear this so we only get one at the end of step.
 
-    if( this.iStepNumber == 0 ){
+    if( this.iStepNumber == 0 ){                          // will force us to reset and go to step 1
       reset();
     }
 
@@ -388,32 +425,35 @@ public class ScriptedAuton{
     }
     
     if( this.iStepNumber != this.iLastStepNumber){				// set conditions for a new step to process.
-      bStepIsSetup = false;
+      bStepIsSetup = false;                               // use once in the step to set conditions if necessary
       bStepIsComplete = false;
       timStepTimer.reset();
-      robotbase.SaveEncoderPosition();
+      robotbase.SaveEncoderPosition();                    // allows us to calculate distance from last known position
+      sStepDesc = getDescription(iSelectedAutonId,iStepNumber);   // get the description of this step
     }
 
-    telem.saveTrueBoolean("SA Step Is Setup", this.bStepIsSetup);
-    
     this.iLastStepNumber = this.iStepNumber;
 
-    if( bStepIsSetup == true ){               // force us to go through at least 1 pass
-      testCompletion(iSelectedAutonId);
+    /**
+     * Here we want to be sure that we go through the actions at leas once
+     * so if this is false we will not test results
+     */ 
+    if( bStepIsSetup == true ){                           // force us to go through at least 1 pass
+      testCompletion(iSelectedAutonId);                   // test for any actions to be complete
 
-      if(bAutonComplete == true){
+      if(bAutonComplete == true){                         // The Auton is done return doing nothing else. 
         //stopAll();
         return;
       }
         
     }
 	
-    setAutonActions(iSelectedAutonId);
-    //System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
-
+		if(this.bStepIsComplete == false){
+      setAutonActions(iSelectedAutonId);
+    }
 
 		if(this.bStepIsComplete == true){
-			this.iNextStepNumber = this.iStepNumber += 1;
+			this.iNextStepNumber = this.iStepNumber + 1;
     }
 	
   	this.bStepIsSetup = true;                   // force at least 1 pass
@@ -434,19 +474,20 @@ public class ScriptedAuton{
 
   private void setAutonActions(Integer iSelectedAutonId){
 
-    String sStartKey = String.format( "%02d|%02d|01", iSelectedAutonId, this.iStepNumber);
+    //String sStartKey = String.format( "%02d|%02d|01", iSelectedAutonId, this.iStepNumber);
+    String sStartKey = buildKey(iSelectedAutonId, this.iStepNumber, 1);   // start at current step, action 1 
 
     // here we iterate through only the actions for this step.
     for (Map.Entry<String, AutonStep> entry : mapValues.tailMap(sStartKey).entrySet()) {
-          String sKey = entry.getKey();         // return the key 
-          AutonStep autonStep = entry.getValue();   // get the associated AutonStep class value
+          String sKey = entry.getKey();                     // get the key which we may not need here 
+          AutonStep autonStep = entry.getValue();           // get the associated AutonStep class value
       
-      // we know we are done here when autonStep.iAutonNumber or 
-      // the autonStep.iAutonStep on the action we just read from the map 
-      // is not the current one being processed 
-      if( autonStep.iAutonNumber != iSelectedAutonId ||              // not the current Auton 
+        // we know we are done here when autonStep.iAutonNumber or 
+        // the autonStep.iAutonStep on the action we just read from the map 
+        // is not the current one being processed 
+        if( autonStep.iAutonNumber != iSelectedAutonId ||              // not the current Auton 
                         autonStep.iAutonStep != this.iStepNumber){  // not the current step
-          break;
+            break;
         }
 
         if( autonStep.sAction.equals("bearing")){           // change the gyro bearing
@@ -468,34 +509,32 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("power")){      // update the variable for driver power
           inputs.dDriverPower = autonStep.dValue;           //    set the driver power
-          //System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
-        } else if(autonStep.sAction.equals("shoot")) {      // start the shooter start machine
+        } else if(autonStep.sAction.equals("shooting")) {   // start the shooter start machine
             inputs.bShooterLaunch = true;                   //    hold the trigger 
-            inputs.bTargetting = true;                      // hold this trigger too  
+            inputs.bTargetting = true;                      //    keep holding this trigger too  
   
-        } else if( autonStep.sAction.equals("spin")){	      // if this is not in the step injest remains unchanged
-          inputs.bSpinUpShooter = true;                 //    spin the shooter to a predetermined value
+        //} else if( autonStep.sAction.equals("spin")){	    // if this is not in the step injest remains unchanged
+        //  inputs.bSpinUpShooter = true;                   //    spin the shooter to a predetermined value
 
-        } else if( autonStep.sAction.equals("settle")){	      // if this is not in the step injest remains unchanged
+        } else if( autonStep.sAction.equals("settle")){	    // if this is not in the step injest remains unchanged
           inputs.dDriverPower = 0.0;              
           inputs.dDriverTurn = 0.0;           
 
-        } else if(autonStep.sAction.equals("target")) {     // start the targetting start machine
-          inputs.bTargetting = true;                        // hold this trigger too  
-          if( autonStep.dValue == 0.0 ){
-            inputs.bCloseTargets = true;
+        } else if(autonStep.sAction.equals("targetting")) { // start the targetting start machine
+          inputs.bTargetting = true;                        //    hold this trigger  
+          if( autonStep.dValue == 0.0 ){                    //    0.0, indicates close targets
+            inputs.bCloseTargets = true;                    
             inputs.bFarTargets = false;
-          } else {
+          } else {                                          //    not 0.0, indicates far targets.
             inputs.bCloseTargets = false;
             inputs.bFarTargets = true;
-
           }
   
-        } else if( autonStep.sAction.equals("timer")){
-                                                        // do nothing, will be used later to test we are done.
+        } else if( autonStep.sAction.equals("timer")){      // do nothing, will be used later to test we are done.
+                                                            // remember timer is reset when we change steps.
 
-        } else if( autonStep.sAction.equals("turnto")){
+        } else if( autonStep.sAction.equals("turnto")){     // spin robot to a new bearing
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
           inputs.iGyroRequest = Gyro.kGyro_TurnTo;          //    tell gyro to spin to location
         }
@@ -504,89 +543,105 @@ public class ScriptedAuton{
 
   private void testCompletion(Integer iSelectedAutonId){
 
-    String sStartKey = String.format( "%02d|%02d|01", iSelectedAutonId, this.iStepNumber);
+    sWhatCompleted = "";
+    String sStartKey = buildKey(iSelectedAutonId, 
+                                    this.iStepNumber, 1);   // start at current auton id, current step, action 1 
 
-    for (Map.Entry<String, AutonStep> entry : mapValues.tailMap(sStartKey).entrySet()) {
-          String sKey = entry.getKey();         // return the key 
-          AutonStep autonStep = entry.getValue();   // get the associated AutonStep class value
-      
-      if( autonStep.iAutonNumber != iSelectedAutonId || autonStep.iAutonStep != this.iStepNumber){
-        break;
+    for (Map.Entry<String, AutonStep> entry :               // iterate through each action in the current auton and step. 
+                  mapValues.tailMap(sStartKey).entrySet()) {
+          //String sKey = entry.getKey();                   // return the key, may not need this. 
+          AutonStep autonStep = entry.getValue();           // get the associated AutonStep class value
+
+                                                            // make sure we are in the same auton and step.
+      if( autonStep.iAutonNumber != iSelectedAutonId ||     // test to see if we are still in the Selected Auton 
+          autonStep.iAutonStep != this.iStepNumber){        // or in the current step from the Map. 
+          break;                                            // get out of the loop if either is not current.
       }
       
-      if( autonStep.sAction.equals("distance")){
-          if( Math.abs(robotbase.dEncoderDistance) > autonStep.dValue ){
+      //////////////////////////////////////////////////////// test the actions to see if any are complete. 
+      if( autonStep.sAction.equals("distance")){            // have we gone far enough 
+          if( Math.abs(robotbase.dEncoderDistance) > 
+                                      autonStep.dValue ){   // is encoder distance > expected
             this.bStepIsComplete = true; 
+            sWhatCompleted = "distance (encoder)";
           }  
-      } else if(autonStep.sAction.equals("shoot")) {
-        if(shooter.bFireSequenceIsComplete == true){
+      } else if(autonStep.sAction.equals("shooting")) {     // check the fire sequence state machine
+        if(shooter.bFireSequenceIsComplete == true){        // are we done?
           this.bStepIsComplete = true;             
+          sWhatCompleted = "fire seq complete";
         }
 
-      } else if( autonStep.sAction.equals("settle")){
-          if(timStepTimer.get() > autonStep.dValue){      // is the step timer up 
+      } else if( autonStep.sAction.equals("settle")){       // let robot settle after a move
+          if(timStepTimer.get() > autonStep.dValue){        // have we waited long enough? 
             this.bStepIsComplete = true;
+            sWhatCompleted = "time up";
           }
 
-      } else if(autonStep.sAction.equals("stop")) {
+      } else if(autonStep.sAction.equals("stop")) {         // we can include a stop request ???
         if(timStepTimer.get() > autonStep.dValue ){
           this.bStepIsComplete = true;             
         }
 
-      } else if(autonStep.sAction.equals("target")) {
+      } else if(autonStep.sAction.equals("targetting")) {   // we are holding the targetting button
 
-        if( robotbase.bBaseIsOnTarget == true && 
-            shooter.bShooterOnTarget == true  ){
+        if( robotbase.bBaseIsOnTarget == true &&            // is robot base aligned to X on camera image?
+            shooter.bShooterOnTarget == true  ){            // is camera aligned to Y on camera image?
             this.bStepIsComplete = true;             
+            sWhatCompleted = "RB and SH on target";
           }
         
-      } else if( autonStep.sAction.equals("turnto")){
-          if(robotbase.bIsOnGyroBearing == true){
-            this.bStepIsComplete = true;  // are we on the right bearing
-            System.out.println("Gyro On bearing: bStepIsComplete = true"); 
+      } else if( autonStep.sAction.equals("turnto")){       // we asked robot to spin to new gyro bearing
+          if(robotbase.bIsOnGyroBearing == true){           // have we spun enough?
+            this.bStepIsComplete = true;                    // are we on the right bearing
+            sWhatCompleted = "Gyro on bearing";
           }
-          //if(robotbase.bIsOnGyroBearing == false){
-          //  timStepTimer.reset();
-          //} else if( robotbase.bIsOnGyroBearing == true && timStepTimer.get() >.20){ 
-          //  this.bStepIsComplete = true;  // are we on the right bearing
-          //  System.out.println("Gyro On bearing: bStepIsComplete = true"); 
-          //}
-      } else if( autonStep.sAction.equals("timer")){
-          if(timStepTimer.get() > autonStep.dValue){      // is the step timer up 
+
+      } else if( autonStep.sAction.equals("timer")){        // we asked to check the step timer
+          if(timStepTimer.get() > autonStep.dValue){        // are we past the time? 
             this.bStepIsComplete = true;
+            sWhatCompleted = "timer up";
           }
+
       }
-	  
+
     }
-
-    //this.bAutonComplete = true;
-
-	  
   }
 
 
   public void addTelemetryHeaders(LCTelemetry telem ){
-    telem.addColumn("SA Auton Number"); 
+    telem.addColumn("SA Auton Id"); 
     telem.addColumn("SA Auton Desc"); 
 		telem.addColumn("SA Step Number"); 
 		telem.addColumn("SA Step Desc"); 
 		telem.addColumn("SA Step Is Complete");
-		telem.addColumn("SA Auton Is Complete");
+		telem.addColumn("SA What Completed");
+    telem.addColumn("SA Auton Is Complete");
     telem.addColumn("SA Step Timer");
     telem.addColumn("SA Ramp Power");
-
-    }
+    telem.addColumn("SA Gyro Bearing");
+    telem.addColumn("SA Gyro On Bearing");
+    telem.addColumn("SA Enc Distance");
+    telem.addColumn("SA RB On Target");
+    telem.addColumn("SA SH On Target");
+    telem.addColumn("SA SH Fire Seq Done");
+  }
 
   public void writeTelemetryValues(LCTelemetry telem ){
-
-    telem.saveInteger("SA Auton Id", iSelectedAutonId);
+    telem.saveInteger("SA Auton Id", this.iSelectedAutonId);
+    telem.saveString("SA Auton Desc", this.sSelectedAutonDesc);
 		telem.saveInteger("SA Step Number", this.iStepNumber); 
-		telem.saveTrueBoolean("SA Step Is Complete", this.bStepIsComplete);
-    telem.saveTrueBoolean("SA Auton Is Complete", this.bAutonComplete);
+    telem.saveString("SA Step Desc", this.sStepDesc );
     telem.saveDouble("SA Step Timer", this.timStepTimer.get() );
     telem.saveTrueBoolean("SA Ramp Power", inputs.bRampPower);
-    
-
+    telem.saveDouble("SA Gyro Bearing", robotbase.dRelativeGyroBearing);
+    telem.saveTrueBoolean("SA Gyro On Bearing", robotbase.bIsOnGyroBearing);
+    telem.saveDouble("SA Enc Distance", robotbase.dEncoderDistance);
+    telem.saveTrueBoolean("SA RB On Target", robotbase.bBaseIsOnTarget);
+    telem.saveTrueBoolean("SA SH On Target", shooter.bShooterOnTarget);
+    telem.saveTrueBoolean("SA SH Fire Seq Done", shooter.bFireSequenceIsComplete);
+    telem.saveTrueBoolean("SA Auton Is Complete", this.bAutonComplete);
+		telem.saveTrueBoolean("SA Step Is Complete", this.bStepIsComplete);
+		telem.saveString("SA What Completed", sWhatCompleted);
 	}
 
   public void outputToDashboard(boolean b_MinDisplay)  {
@@ -606,20 +661,6 @@ public class ScriptedAuton{
 
 }
 
-/**
-public AutonStep getAutonStep(Double dDistance) {
-	
-	Double dKey = mapValues.floorKey(dDistance);
-
-	return mapValues.get(dKey);
-
-	//return mAutonStep;
-    //System.out.println("Key = " + String.valueOf(iVelocity) + " | " + 
-    //                         "floor: " + String.valueOf(floorKey) + " , " + mapValues.get(floorKey) +
-	//						 "  next: " + String.valueOf(ceilingKey)  + " , " + mapValues.get(ceilingKey) );
-	  
-  }
-**/
 
 
 

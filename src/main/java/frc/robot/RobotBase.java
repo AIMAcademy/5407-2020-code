@@ -3,11 +3,11 @@ package frc.robot;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
-//import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel;
@@ -54,12 +54,13 @@ public class RobotBase {
 	double dRelativeGyroBearing = 0.0;
 	boolean bIsOnGyroBearing = false;
 	boolean bIsOnCloseToBearing = false;
+
 	double dGyroDiffPower = 0.0;
 	double dGyroDeflectionPower = 0.0;
-	double dCorrectAngleProportion = -0.05;
-	double dCorrectAngleMax = .35;
-	double dCorrectAngleMin = .2;
 	double dGyroSensitivity = .4;
+	double dCorrectAngleProportion 	= -0.03;
+	double dCorrectAngleMax 		= .35;
+	double dCorrectAngleMin 		= .10;
 
 
 	double dEncoderPosition = 0.0;
@@ -108,16 +109,17 @@ public class RobotBase {
 		motWinchLeftMotor.set(0.0);
 		motWinchRightMotor.set(0.0);
 
-
-		mCompressor = new Compressor( RobotMap.kCANId_PCM );
-		mCompressor.enabled();
-		mCompressor.setClosedLoopControl(true);
-		sCompressorCLState = "Normal";
+		if( mCompressor != null){
+			mCompressor = new Compressor( RobotMap.kCANId_PCM );
+			mCompressor.enabled();
+			mCompressor.setClosedLoopControl(true);
+			sCompressorCLState = "Normal";
+		}
 
 		SetDevModes();
 
-		solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
-		solTeainator = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_Teainator);
+		//solShifter = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_DriveShifter);
+		//solTeainator = new Solenoid(RobotMap.kCANId_PCM, RobotMap.kPCMPort_Teainator);
 
 		motIntake = new Spark(RobotMap.kPWMPort_IntakeMoter);
 		motIntake.set(0.0);
@@ -138,13 +140,16 @@ public class RobotBase {
 	}
 
 	public void SetDevModes(){
-
-		if(bDev_StopCompressor == true){
-			mCompressor.stop();
-			sCompressorCLState = "Dev Stopped";
-		} else {
-			mCompressor.start();
-			sCompressorCLState = "Normal";
+		if( mCompressor != null){
+			if(bDev_StopCompressor == true){
+				mCompressor.stop();
+				sCompressorCLState = "Dev Stopped";
+			} else {
+				mCompressor.start();
+				sCompressorCLState = "Normal";
+			}
+		}else {
+			sCompressorCLState = "null";
 		}
 	}
 
@@ -272,7 +277,9 @@ public class RobotBase {
 			motRightDriveMotorB.set(ControlMode.PercentOutput, -dRightDrivePower ); // invert on final output
 		}
 
-		solShifter.set(inputs.bShiftBaseToHigh);
+		if( solShifter != null) {
+			solShifter.set(inputs.bShiftBaseToHigh);
+		}
 
 		motWinchLeftMotor.set(inputs.dLeftWinchPower);
 		motWinchRightMotor.set(inputs.dRightWinchPower);
@@ -290,12 +297,13 @@ public class RobotBase {
 		motIntake.set(dIntakePower);				// assign the resulting power settings 
 
 		//Setting Intake Soloniod to true/false
-		if( inputs.bTeainatorDown == true)
-			solTeainator.set(true);
+		if( solTeainator != null ){
+			if( inputs.bTeainatorDown == true)
+				solTeainator.set(true);
 
-		if( inputs.bTeainatorUp == true)
-			solTeainator.set(false);
-
+			if( inputs.bTeainatorUp == true)
+				solTeainator.set(false);
+		}
 	}
 
 	
@@ -307,8 +315,18 @@ public class RobotBase {
 		//SmartDashboard.putNumber("RB LL dDiff", dDiff);
 		//SmartDashboard.putNumber("RB LL X Request", inputs.dRequestedBearing);
 
-		bBaseIsOnTarget = true;
-		
+		bBaseIsOnTarget = false;
+
+		// here we want to wait for the camera to tilt up enough to lock on and allow 
+		// the shooter camera Y (tilt) to get close to center. Then we can pan the robot at 
+		// a hopefully good target. This may prevent bogies.
+		// without this X (pan) can be eratic and takes more time.  
+		if( limelight.isTarget() == false){
+			return;
+		} else if( Math.abs(limelight.getTy()) > 8.0){	
+			return;
+		}
+
 		if( Math.abs(dTx) < .5){
 			bBaseIsOnTarget = true;
 		} else {
@@ -398,7 +416,8 @@ public class RobotBase {
 		telem.saveDouble("RB Gyro Deflect Power", dGyroDeflectionPower);
 		telem.saveTrueBoolean("GY On Bearing", this.bIsOnGyroBearing);
 
-		telem.saveDouble("RB Compres Current", this.mCompressor.getCompressorCurrent(),2);
+		if( mCompressor != null )
+			telem.saveDouble("RB Compres Current", this.mCompressor.getCompressorCurrent(),2);
 		telem.saveString("RB Compres CL State", sCompressorCLState);
 
 		telem.saveTrueBoolean("Dev Stop Compressor", bDev_StopCompressor);
@@ -434,7 +453,10 @@ public class RobotBase {
 		if( b_MinDisplay == true ) return;
 
 		SmartDashboard.putNumber("RB Intake Speed", this.motIntake.getSpeed());
-		SmartDashboard.putBoolean("RB Tea State", this.solTeainator.get());
+
+		if(this.solTeainator != null)
+				SmartDashboard.putBoolean("RB Tea State", this.solTeainator.get());
+
 		SmartDashboard.putString("RB Comp CL State", sCompressorCLState);
 		SmartDashboard.putBoolean("Dev Stop Compressor", bDev_StopCompressor);
 		SmartDashboard.putBoolean("Dev Stop Drive Wheels", bDev_StopDriveWheels);
