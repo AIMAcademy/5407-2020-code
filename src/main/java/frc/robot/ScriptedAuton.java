@@ -88,6 +88,7 @@ public class ScriptedAuton{
   RobotBase robotbase = null;
   Shooter shooter = null;
   Config config = null;
+  RampPower rampDrivePower = null;
     
   Timer timStepTimer = null;
   boolean bAutonComplete = false;
@@ -110,6 +111,14 @@ public class ScriptedAuton{
     this.robotbase  = mPassedRobotBase;
     this.shooter    = mPassedShooter; 
     this.config     = mPassedConfig; 
+
+    rampDrivePower = new RampPower(.10,           // minpower
+                                    1.0,          // maxpower
+                                    .20,          // ramp up pct
+                                    .85,          // ramp down pct
+                                    .005);        // proportional ramp down multiplier
+
+    rampDrivePower.setStopOnArrival(true, .005);
 
     sScriptFileName = sPassedFilePath + "/" + sPassedFileName;
     loadScript();
@@ -494,6 +503,9 @@ public class ScriptedAuton{
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
 
         } else if( autonStep.sAction.equals("distance")){   // drive a specific encoder distance
+            if( this.bStepIsSetup == false){
+              rampDrivePower.setStartEndPosition(robotbase., dNewEndPosition);fwl
+            }
             inputs.dTargetDistanceUsingEncoder = 
                                           autonStep.dValue; // tell downstream this is our target encoder distance 
             inputs.bRampPower = true;                       // tell downstream we want to ramp the power

@@ -232,7 +232,7 @@ public class Robot extends TimedRobot {
       shooter.outputToDashboard(false);
 
     } else if( sTestProcess.compareTo("cameraclose") == 0 ){
-      shooter.svoCamera.set( shooter.dCamera_FarTargets);
+      shooter.svoCamera.set( shooter.dCamera_CloseTargets);
 
     } else if( sTestProcess.compareTo("clearepc") == 0 ){
 

@@ -84,14 +84,18 @@ public class Shooter {
 	double dCamera_CloseTargets = .472;
 	double dCamera_FarTargets = .456;
 	double dCamera_EPCView = .732;
+	double dCamera_DefaultPosition = dCamera_Store; 
+	LightMode mCameraLEDMode = LightMode.eOff;
 
 
-	double dCameraShootingPosition = 0.0;
+
+	//double dCameraShootingPosition = 0.0;
 	double dCameraYAdjustment = 0.0;
-	double dCameraYOffset = 0.0001;
-	double dCameraYOffsetMin = .0004;
+	double dCameraYOffset = 0.0003;
+	double dCameraYOffsetMin = .0006;
 	double dCameraY = 0.0;
 	double dCameraClose = 3.0;
+	double dCameraPosition = dCamera_Store;
 	boolean bShooterOnTarget = false;
 
 	boolean bLastShooterLaunch = false;             // what was the launch value last cycle.
@@ -138,8 +142,10 @@ public class Shooter {
 
 
 		svoCamera = new Servo(RobotMap.kPWMPort_CameraServo);
-		svoCamera.setPosition(dCamera_FarTargets);		//dCamera_Store);
-		sCameraStatus = "Far";		
+		//dCamera_DefaultPosition = dCamera_FarTargets; 
+		dCameraPosition = dCamera_DefaultPosition;
+		svoCamera.setPosition(dCameraPosition);		//dCamera_Store);
+		sCameraStatus = "Store";		
 		
 		timCameraSample = new Timer();
 		timCameraSample.start();
@@ -158,8 +164,9 @@ public class Shooter {
 		timCameraSample.reset();
 		timTargettingDelay.reset();
 
-		svoCamera.setPosition(dCamera_FarTargets);		//dCamera_Store);
-		sCameraStatus = "Far";		
+		dCameraPosition = dCamera_DefaultPosition;
+		svoCamera.setPosition(dCameraPosition);		//dCamera_Store);
+		sCameraStatus = "Default";		
 	}
 	/****public void reloadTables(){
 
@@ -169,9 +176,12 @@ public class Shooter {
 	****/
 
 	private void CameraPositionAndSetup(Inputs inputs, Config config, Limelight limelight){
-		double dCameraPosition = dCamera_FarTargets;
-		LightMode mCameraLEDMode = LightMode.eOff;
-		double dCameraCurrPosition = svoCamera.getPosition(); 
+		mCameraLEDMode = LightMode.eOff;
+		dCameraPosition = dCamera_DefaultPosition;
+
+		if( dCameraPosition != dCamera_Store){
+			mCameraLEDMode = LightMode.eOn;
+		}
 
 		this.dCameraY = limelight.getTy();								// now move camers to correct Y position
 		this.dCameraYAdjustment = 0.0;
@@ -196,25 +206,25 @@ public class Shooter {
 			mCameraLEDMode = LightMode.eOn;
 
 		} else if(inputs.bShooterLaunch == true){
-			dCameraPosition = dCameraCurrPosition;							// don't move camera if we are shooting
+			dCameraPosition = svoCamera.getPosition();					// don't move camera if we are shooting
 			mCameraLEDMode = LightMode.eOn;
 
 		} else if( inputs.bTargetting == true && inputs.bShooterLaunch == false ){
+			AlignOnCameraY(limelight);
+
+			/**
 			mCameraLEDMode = LightMode.eOn;
 
-			// set limelight pipeline
-
-			if( limelight.isTarget() == false ) {								// we do not see target
+			if( limelight.isTarget() == false ) {						// we do not see target
 				timCameraSample.reset();									// no target so reset the timer
 
-				dCameraPosition = dCamera_FarTargets;
-				sCameraStatus = "Far Targets";
-				//if(inputs.bCloseTargets == true){							// position where operator tells us
-				//	dCameraPosition = dCamera_CloseTargets;
-				//	sCameraStatus = "Close Targets";
-				//} else if(inputs.bFarTargets == true) {
-				//	dCameraPosition = dCamera_FarTargets;
-				//}
+				if(inputs.bCloseTargets == true){							// position where operator tells us
+					dCameraPosition = dCamera_CloseTargets;
+					sCameraStatus = "Close Targets";
+				} else if(inputs.bFarTargets == true) {
+					dCameraPosition = dCamera_FarTargets;
+					sCameraStatus = "Far Targets";
+				}
 			
 			}else if( limelight.isTarget() == true ){						// we see a target
 				
@@ -231,18 +241,6 @@ public class Shooter {
 					sCameraStatus = "Too Low";
 				}
 
-				//if( timCameraSample.get() < .10){						// use the timer to allow small changes
-				//	return;
-				//}
-
-				//timCameraSample.reset();
-
-				//if( Math.abs(this.dCameraY) <= dCameraClose ){	    		// within +/- a few degrees of target
-				//	this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
-				//} else {
-				//	this.dCameraYAdjustment = this.dCameraY * .0001;  		// distance far, calc a proportional new position
-				//}
-
 				if( Math.abs(this.dCameraY) <= dCameraClose ){	    		// within +/- a few degrees of target
 					if( timCameraSample.get() < .10){						// use the timer to allow small changes
 						return;
@@ -253,9 +251,8 @@ public class Shooter {
 				} else {
 					this.dCameraYAdjustment = this.dCameraY * .0001;  		// distance far, calc a proportional new position
 				}
-				
-				//this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
-				SmartDashboard.putNumber("Sh Camera Y Adjust init", this.dCameraYAdjustment );
+
+				this.dCameraYAdjustment = this.dCameraY * this.dCameraYOffset;  // calc a proportional new position
 
 				if( Math.abs(dCameraYAdjustment) < dCameraYOffsetMin ){			// if abs of adj is < than min
 					if(this.dCameraYAdjustment > 0.0){
@@ -265,12 +262,9 @@ public class Shooter {
 					}
 				}
 
+				dCameraPosition = dCameraCurrPosition + this.dCameraYAdjustment;
 
-				SmartDashboard.putNumber("Sh Camera Y Adjust final", this.dCameraYAdjustment );
-				dCameraPosition = dCameraCurrPosition + this.dCameraYAdjustment;	// add to curr position to move +/- to 0.0 Y
-
-
-			}
+				*/
 		}
 
 		if(dCameraPosition < dCamera_TopStop ){			// camera stops
@@ -284,6 +278,63 @@ public class Shooter {
 		svoCamera.setPosition(dCameraPosition);
 		limelight.setLedMode(mCameraLEDMode);
 
+	}
+
+	public void AlignOnCameraY(Limelight limelight){
+
+		dCameraPosition = svoCamera.getPosition();					// get and keep current position
+		mCameraLEDMode = LightMode.eOn;								// turn on light so we can see the camera
+		this.dCameraYAdjustment = 0.0;								// if not updated below no change in position
+
+		if( limelight.isTarget() == false ) {						// we do not see target
+			timCameraSample.reset();								// no target so reset the timer
+		}															
+
+		if(inputs.bCloseTargets == true){							// set position as a starting point
+			dCameraPosition = dCamera_CloseTargets;					// these may get changed below which is good
+			sCameraStatus = "Close Targets";						
+		} else if(inputs.bFarTargets == true) {
+			dCameraPosition = dCamera_FarTargets;
+			sCameraStatus = "Far Targets";
+		}
+		
+		if( limelight.isTarget() == true ){							// we see a target, we now can override position above
+			
+			if( Math.abs(this.dCameraY) <= .25 ){						// within +.25 or -.25 degrees of target
+				sCameraStatus = "Y Locked";
+				bShooterOnTarget = true;
+				return;
+			}
+
+			if(this.dCameraY > .25){ 
+				sCameraStatus = "Too High";
+			} else if(this.dCameraY < -.25){ 
+				sCameraStatus = "Too Low";
+			}
+
+			if( Math.abs(this.dCameraY) <= dCameraClose ){			// within +/- a few degrees of target
+				if( timCameraSample.get() < .10){						// use the timer to allow small close changes
+					return;
+				} else {  										    	// reset the timer and the keep going here 
+					timCameraSample.reset();
+					this.dCameraYAdjustment = 
+							this.dCameraY * this.dCameraYOffset;	// calc a proportional new position
+				}
+			} else {
+				this.dCameraYAdjustment = this.dCameraY * .0001;  		// distance far, calc a proportional new position
+			}
+
+			if( Math.abs(dCameraYAdjustment) < dCameraYOffsetMin ){	// if abs of adj is < than min, set to min
+				if(this.dCameraYAdjustment > 0.0){
+					this.dCameraYAdjustment =  dCameraYOffsetMin;		// set min in + direction
+				} else {
+					this.dCameraYAdjustment = -dCameraYOffsetMin;		// set min in - direction
+				}
+			}
+
+		}
+
+		dCameraPosition = svoCamera.getPosition() + this.dCameraYAdjustment;	// add adjustment to current position
 	}
 
 	public void update(final Inputs inputs, final Config config, Limelight limelight) {
@@ -384,6 +435,7 @@ public class Shooter {
 		dCamera_CloseTargets = config.getDouble("shooter.dCamera_CloseTargets", .472);
 		dCamera_FarTargets 	 = config.getDouble("shooter.dCamera_FarTargets", .456);
 		dCamera_EPCView 	 = config.getDouble("shooter.dCamera_EPCView", .732);
+		//dCameraTicksPerDegree = config.getDouble("shooter.dCameraTicksPerDegree", .0018);
 
 		dCameraYOffsetMin 	 = config.getDouble("shooter.dCameraYOffsetMin", .0004); 
 		dCameraYOffset	 	 = config.getDouble("shooter.dCameraYOffset", .0001); 
