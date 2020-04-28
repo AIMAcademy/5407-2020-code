@@ -126,6 +126,7 @@ public class RobotBase {
 
 		gyro = new Gyro();
 
+
 	}
 
 	public void loadConfig(){
@@ -207,8 +208,15 @@ public class RobotBase {
 	}
 
 	public void SaveEncoderPosition(){
-		applyPower.saveEncoderLocation(k_sBaseMotorEncoderKey, dEncoderPosition);
+		applyPower.saveEncoderLocation(k_sBaseMotorEncoderKey, getEncoderPosition());
 	}
+
+	public double getEncoderPosition(){
+		dEncoderPosition = (double) motLeftDriveMotorA.getSelectedSensorPosition();
+		return dEncoderPosition;
+	}
+
+
 
     /**
      * This function is run to update the output objects with data. 
@@ -248,10 +256,13 @@ public class RobotBase {
 
 		if(bDev_StopDriveWheels == false ){	// used durign dev to keep robot from killing someone
 		
-			if( inputs.bRampPower == true){
-				inputs.dDriverPower = applyPower.RampPowerToEncoder(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
-										dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
-	 		}
+			//if( inputs.bRampPower == true){
+				//inputs.dDriverPower = applyPower.RampPowerToEncoder(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
+				//						dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
+			//	inputs.dDriverPower = applyPower.RampPowerToEncoder(inputs.dDriverPower, k_sBaseMotorEncoderKey, 
+				//						dEncoderPosition, inputs.dTargetDistanceUsingEncoder, .15);
+
+	 		//}
 			//System.out.println(">>>>>SA inputs.dDriverPower: " + String.valueOf(inputs.dDriverPower));
 
 			if(inputs.iGyroRequest == Gyro.kGyro_TurnTo){

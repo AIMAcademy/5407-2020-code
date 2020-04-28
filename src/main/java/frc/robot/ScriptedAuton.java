@@ -503,12 +503,23 @@ public class ScriptedAuton{
           inputs.dRequestedBearing = autonStep.dValue;      //    set a Requested bearing for the gyro.
 
         } else if( autonStep.sAction.equals("distance")){   // drive a specific encoder distance
-            if( this.bStepIsSetup == false){
-              rampDrivePower.setStartEndPosition(robotbase., dNewEndPosition);fwl
+
+            if( this.bStepIsSetup == false){                // do this at beginning of the auton step
+              rampDrivePower.setNewDistance(
+                              robotbase.dEncoderPosition,   // encoder where we are starting 
+                                        autonStep.dValue    // distance we want to go
+                                                );   
             }
+
             inputs.dTargetDistanceUsingEncoder = 
                                           autonStep.dValue; // tell downstream this is our target encoder distance 
-            inputs.bRampPower = true;                       // tell downstream we want to ramp the power
+            //inputs.bRampPower = true;                       // tell downstream we want to ramp the power
+            if( inputs.dDriverPower != 0.0){
+              inputs.dDriverPower = rampDrivePower.calcPower(inputs.dDriverPower,robotbase.dEncoderPosition);  // current position 
+            } else {
+              inputs.dDriverPower = rampDrivePower.calcPower(robotbase.dEncoderPosition);  // current position 
+            }
+                                                          
             inputs.iGyroRequest = Gyro.kGyro_Correct;       //    tell gyro to correct on non encoder side
 
         } else if( autonStep.sAction.equals("ingest")){	    // test conditions for ingest
@@ -521,6 +532,7 @@ public class ScriptedAuton{
 
         } else if( autonStep.sAction.equals("power")){      // update the variable for driver power
           inputs.dDriverPower = autonStep.dValue;           //    set the driver power
+
 
         } else if(autonStep.sAction.equals("shooting")) {   // start the shooter start machine
             inputs.bShooterLaunch = true;                   //    hold the trigger 

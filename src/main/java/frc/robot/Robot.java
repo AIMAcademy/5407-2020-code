@@ -29,11 +29,14 @@ public class Robot extends TimedRobot {
   Limelight limelight = null;
   public final String LimelightHostname = "limelight";   // Limelight http camera feeds
   public HttpCamera limelightFeed;
-  ScriptedAuton scriptedauton = null;  
+  ScriptedAuton scriptedauton = null; 
+  int iSelectedAuton = 0;
+
   private String sTestProcess = "none";
   boolean bTestIsDone = false;
+  boolean bTestIsSetup = false;
+  RampPower testRampPower = null; 
 
-  int iSelectedAuton = 0;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -201,6 +204,20 @@ public class Robot extends TimedRobot {
     config.load();
     String sTemp = config.getString("robot.sTestProcess", "none");
     sTestProcess = sTemp.strip().toLowerCase().trim();
+    bTestIsSetup = false;
+    
+
+    if( sTestProcess.compareTo("ramppower") == 0 ){
+      robotbase.SaveEncoderPosition();
+      System.out.println("testInit: Encoder Position = " + String.valueOf(robotbase.getEncoderPosition()) );
+      
+      testRampPower = new RampPower( .1, 1.0, .10, .80, .00002);   // old one is now garbage
+      testRampPower.setNewDistance(robotbase.getEncoderPosition(), 180000);
+      testRampPower.setDebug(true);
+      testRampPower.setStopOnArrival( true, .01);
+    }
+
+    System.out.println("testInit: Process [" + sTestProcess + "] is initialized." );
 
   }
 
@@ -270,6 +287,14 @@ public class Robot extends TimedRobot {
       scriptedauton.dumpDecriptions();
       System.out.println("******** Test is done ******************");
       bTestIsDone = true;
+
+    } else if( sTestProcess.compareTo("ramppower") == 0 ){
+      if( testRampPower.bArrived == false){
+        inputs.dDriverPower = testRampPower.calcPower(robotbase.getEncoderPosition());
+      }
+
+      robotbase.update();
+
 
     } else {
 

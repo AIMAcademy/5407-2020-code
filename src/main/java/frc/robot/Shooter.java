@@ -79,10 +79,11 @@ public class Shooter {
 
 	String sCameraStatus = "";
 	double dCamera_TopStop = .401;
-	double dCamera_Store = .535;
-	double dCamera_Bar = .535;
 	double dCamera_CloseTargets = .472;
 	double dCamera_FarTargets = .456;
+	double dCamera_SeeTargets = .515;
+	double dCamera_Bar = .535;
+	double dCamera_Store = .535;
 	double dCamera_EPCView = .732;
 	double dCamera_DefaultPosition = dCamera_Store; 
 	LightMode mCameraLEDMode = LightMode.eOff;
@@ -299,7 +300,11 @@ public class Shooter {
 		}
 		
 		if( limelight.isTarget() == true ){							// we see a target, we now can override position above
-			
+
+			if( dCameraPosition > dCamera_SeeTargets ){
+				return;
+			}
+	
 			if( Math.abs(this.dCameraY) <= .25 ){						// within +.25 or -.25 degrees of target
 				sCameraStatus = "Y Locked";
 				bShooterOnTarget = true;

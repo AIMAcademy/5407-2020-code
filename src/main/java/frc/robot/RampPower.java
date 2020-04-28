@@ -42,6 +42,14 @@ public class RampPower{
 		
 	}
 
+	public void setMaxPower(double dNewMaxPower){
+		this.dMaxPower = dNewMaxPower;
+	}
+
+	public void setDebug( boolean bState ){
+		this.bDebug = bState;
+	}
+
 	//public RampPower(double dOrigMinPower, double dOrigMaxPower){
 	//	this.dMinPower = Math.abs(dOrigMinPower);
 	//	this.dMaxPower = Math.abs(dOrigMaxPower);
@@ -49,11 +57,11 @@ public class RampPower{
 
 	////////////////////////////////////////////////////////////////
 	
-	public void setStartEndPosition(double dNewStartPosition, double dNewEndPosition){
+	public void setNewDistance(double dNewStartPosition, double dRequestedDistance){
 		this.dStartPosition = dNewStartPosition;
-		this.dEndPosition = dNewEndPosition;
+		this.dTotalDistance = Math.abs(dRequestedDistance);
+		this.dEndPosition = dRequestedDistance + this.dStartPosition;
 		this.bArrived = false;
-		this.dTotalDistance = Math.abs(this.dEndPosition - this.dStartPosition);
 		
 		this.dInvertDirection = 1.0;								// assumes no direction inversion
 		if( this.dEndPosition < this.dStartPosition){				// direct is negative
@@ -66,7 +74,7 @@ public class RampPower{
 	}
 	
 	public void setRampDownPct( double dNewRampDownPct ){
-		this.dRampDownPct = dNewRampDownPct;
+		this.dRampDownPct = Math.abs(dNewRampDownPct);
 		this.dRampDownDistancePct = 1.0-dRampDownPct;	 // what percentage of total distance is the end part
 	}
 
@@ -76,9 +84,11 @@ public class RampPower{
 	
 	public void printHeader(){
 		if( this.bDebug == true ){
-			System.out.println( String.format("\n\nDist: %5.2f, Start: %5.0f, End: %5.0f, DownProp: %5.2f", 
+			System.out.println( "\n\n-----------------------------------------------------------------------------------------");
+			System.out.println( String.format("Start: % 8.0f, Dist: % 8.0f, End: % 8.0f, DownProp: % 5.2f", 
 									this.dTotalDistance, this.dStartPosition, this.dEndPosition, this.dDownProportion));
-			System.out.println( String.format("****: %4s | %5s | %5s | %5s | ", "DFT ", "PFSTR", "PPUP ", "Power"));    
+			System.out.println( "-----------------------------------------------------------------------------------------");
+			System.out.println( String.format("****: %8s | %5s | %5s | %5s | ", "    DFT ", "PFSTR", " PPUP", "Power"));    
 		}
 	}
 	
@@ -103,17 +113,18 @@ public class RampPower{
 		}
 	}	
 
-	
-	public double calcPower( double dPower, double dCurrPosition ){
+	public boolean getStopOnArrival(){
+		return bStopOnArrival;
+	}
 
-		dPower = Math.abs(dPower);
+	public double calcPower(double dNewMaxPower, double dCurrPosition ){  // overload of method
+		this.dMaxPower = dNewMaxPower;
+		return calcPower(dCurrPosition);
+	}
 
-		//double dInverter = 1.0;				// save this for the end. we will do the power calcs in positive range
-		//if(dPower < 0){
-		//		dInverter = -1.0;
-		//		dPower = Math.abs(dPower);
-		//}
+	public double calcPower(double dCurrPosition ){
 
+		double dPower = Math.abs(this.dMaxPower);
 		
 		// 0.........1.........2.........3.........4.........5.........6.........7.........8.........9.........100
 		// 0....5....0....5....0....5....0....5....0....5....0....5....0....5....0....5....0....5....0....5....0
@@ -122,8 +133,8 @@ public class RampPower{
 		// PctFromStart = 50/90 = .56 = 56% 
 
 		double dDistanceFromTarget = Math.abs(dCurrPosition - this.dStartPosition);				// how far have we gone?
-		double dDistanceToTarget   = this.dTotalDistance  - dDistanceFromTarget;		// how much left?
-		this.bCloseToTarget = false;
+		double dDistanceToTarget   = this.dTotalDistance    - dDistanceFromTarget;		// how much left?
+		this.bCloseToTarget = false;   
 		this.bArrived = false;
 
 		// | ----- Ramp Up ----|------------------------ Full Power -----------------------|----- Ramp Down ---|
@@ -135,6 +146,10 @@ public class RampPower{
 												this.dTotalDistance;  	// what percentage from the start are we
 		double dPctFromEnd 		 = 1.00 - dPctFromStart;				// what percentage to the end are we  1.00 = 100% 
 		
+		//System.out.println( String.format("\n\nDist: % 5.2f, Start: %5.0f, End: %5.0f", 
+		//		this.dTotalDistance, this.dStartPosition, this.dEndPosition));
+
+
 		if(this.bStopOnArrival == true && 
 			dPctCloseToTarget > 0.0 &&									// did we want to stop before the target?
 			dPctFromEnd <= dPctCloseToTarget) {							// are we close enough to the target
@@ -162,7 +177,9 @@ public class RampPower{
 											dDistanceToTarget);   				// return a percentage of the power 
 			
 			if( this.bDebug == true )
-				System.out.println( String.format("  Up: % 4.0f | %5.2f | %5.2f | %5.2f | ", dDistanceFromTarget, dPctFromStart, dPctOfUpPower, dPower));    
+				System.out.println( String.format("  Up: % 8.0f | % 5.2f | % 5.2f | % 5.2f | % 8.0f | % 8.0f | % 8.0f", 
+					dDistanceFromTarget, dPctFromStart, dPctOfUpPower, dPower,
+					this.dStartPosition, dCurrPosition, this.dEndPosition));    
 				
 		// *****************************************************
 		// test for ramp down
@@ -175,7 +192,7 @@ public class RampPower{
 											dDistanceToTarget);   				// return a percentage of the power 
 					
 					if( this.bDebug == true )
-						System.out.println( String.format("DPro: % 4.0f | %5.2f | %5.2f | %5.2f | %5.5s | %5.5s ", 
+						System.out.println( String.format("DPro: % 8.0f | % 5.2f | % 5.2f | % 5.2f | %5.5s | %5.5s ", 
 								dDistanceFromTarget, dPctFromStart, 
 								dDownProportion, dPower, 
 								String.valueOf(this.bCloseToTarget), String.valueOf(this.bArrived) ));    
@@ -187,9 +204,9 @@ public class RampPower{
 													dDistanceToTarget);		 	// return a percenatge of the power 
 				
 				if( this.bDebug == true )
-					System.out.println( String.format("DOWN: % 4.0f | %5.2f | %5.2f | %5.2f | %5.5s | %5.5s ", 
+					System.out.println( String.format("DOWN: % 8.0f | % 5.2f | % 5.2f | % 5.2f | %5.5s | %5.5s ", 
 								dDistanceFromTarget, dPctFromStart, 
-								dDownProportion, dPower, 
+								dPctOfDownPower, dPower, 
 								String.valueOf(this.bCloseToTarget), String.valueOf(this.bArrived) ));    
 				}
 				
@@ -200,7 +217,9 @@ public class RampPower{
 				dPower = normalizePower( dPower, dDistanceToTarget );
 
 				if( this.bDebug == true )
-					System.out.println( String.format("Full: % 4.0f | %5.2f | %5.2f | %5.2f | ", dDistanceFromTarget, dPctFromStart, 0.0, dPower));    
+				System.out.println( String.format("Full: % 8.0f | % 5.2f | % 5.2f | % 5.2f | % 8.0f | % 8.0f | % 8.0f", 
+					dDistanceFromTarget, dPctFromStart, 0.0, dPower,
+					this.dStartPosition, dCurrPosition, this.dEndPosition));    
 		}
 		
 		
@@ -210,12 +229,14 @@ public class RampPower{
 	
 	private double normalizePower( double dPower, double dDistanceToTarget ){
 
+		//System.out.println(String.format("NP-I: % 5.2f", dPower));
 		if( dPower <= this.dMinPower ){
-			dPower = dMinPower;
+			dPower = this.dMinPower;
 		} else if( dPower > this.dMaxPower){
-			dPower = dMaxPower;
+			dPower = this.dMaxPower;
 		}			
-		
+		//System.out.println(String.format("NP-O: % 5.2f", dPower));
+
 		if( dDistanceToTarget < 0.0){						// did we pass the end point?
 			dPower *= -1.0;									// invert as we passed the end point. 
 		}
