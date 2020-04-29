@@ -29,8 +29,7 @@ public class ApplyPower {
     double dCalculatedPower = 0.0;      // default this in case of no changes 
     double dRampUpPoint = .20;
     double dRampDownPoint = .80;
-    double dTicksToInches = 2727.272727;
-
+    double dTicksToInches = 2987.234043;
 
     public ApplyPower(){
 		

@@ -36,6 +36,7 @@ public class Robot extends TimedRobot {
   boolean bTestIsDone = false;
   boolean bTestIsSetup = false;
   RampPower testRampPower = null; 
+  ApplyPower testApplyPower = null;
 
 
   /**
@@ -209,10 +210,20 @@ public class Robot extends TimedRobot {
 
     if( sTestProcess.compareTo("ramppower") == 0 ){
       robotbase.SaveEncoderPosition();
-      System.out.println("testInit: Encoder Position = " + String.valueOf(robotbase.getEncoderPosition()) );
+      System.out.println("testInit: Encoder Position ticks = " + String.valueOf(robotbase.getEncoderPosition()) );
+      testApplyPower = new ApplyPower();
+      System.out.println("testInit: Encoder Position inchs= " + 
+              String.valueOf(testApplyPower.ticksToInches(robotbase.getEncoderPosition())) );
       
-      testRampPower = new RampPower( .1, 1.0, .10, .80, .00002);   // old one is now garbage
-      testRampPower.setNewDistance(robotbase.getEncoderPosition(), 180000);
+
+      testRampPower = new RampPower( .1,
+              config.getDouble("testRampPower.dMaxPower", 1.0), 
+              config.getDouble("testRampPower.dRampUpPct", .1), 
+              config.getDouble("testRampPower.dRampDNPct", .6), 
+              config.getDouble("testRampPower.dRampProp", .05));
+      testRampPower.setNewDistance(    testApplyPower.ticksToInches(robotbase.getEncoderPosition())  , 
+      config.getDouble("testRampPower.dDistance", 35.25));
+      //testRampPower.setNewDistance(    robotbase.getEncoderPosition()  , testApplyPower.inchesToTicks(35.25));
       testRampPower.setDebug(true);
       testRampPower.setStopOnArrival( true, .01);
     }
@@ -290,7 +301,7 @@ public class Robot extends TimedRobot {
 
     } else if( sTestProcess.compareTo("ramppower") == 0 ){
       if( testRampPower.bArrived == false){
-        inputs.dDriverPower = testRampPower.calcPower(robotbase.getEncoderPosition());
+        inputs.dDriverPower = testRampPower.calcPower(   testApplyPower.ticksToInches( robotbase.getEncoderPosition())  );
       }
 
       robotbase.update();
