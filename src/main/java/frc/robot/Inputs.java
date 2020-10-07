@@ -28,6 +28,13 @@ public class Inputs {
 	public Joystick joyTestController = null;
 
 
+	//Test Code
+	//Orginally named Daniel is cool
+	//Also brackets go like this {
+	//}
+	public double dDanielsMouthPower = 0.0; 
+	private int iDanielCounts = 0;
+
 	public double dDriverPower = 0.0;
 	public double dLeftWinchPower = 0.0;
 	public double dRightWinchPower = 0.0;
@@ -206,6 +213,21 @@ public class Inputs {
 			}
 		}
 
+		if(gamepadOperator.getBButtonPressed()){ 
+			
+			iDanielCounts++; 
+			
+		}
+		if (iDanielCounts == 20) {
+
+			dDanielsMouthPower = 0.5;
+			
+ 
+		} else if (iDanielCounts == 25) {
+
+			dDanielsMouthPower = 0.0;
+
+		}
 
 		if(joyTestController.getTop() == true){
 			iGyroRequest = Gyro.kGyro_Assist;

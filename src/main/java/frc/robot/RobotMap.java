@@ -37,8 +37,9 @@ class RobotMap {
    public final static int kAnalogPort_TurretPos = 1;
 
    // PWM Ports
+   public final static int kPWMPort_DanielsMouth = 1; 
    public final static int kPWMPort_IntakeMoter = 5;
-   public final static int kPWMPort_EPCLifter  = 1;
+   public final static int kPWMPort_EPCLifter  = 6;
    public final static int kPWMPort_EPCCarousel = 2;
    public final static int kPWMPort_CameraServo = 3;
    public final static int kPWMPort_ShooterHoodMotor = 0;  // 5

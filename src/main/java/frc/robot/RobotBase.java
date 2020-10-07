@@ -38,6 +38,10 @@ public class RobotBase {
 	Compressor mCompressor = null;
 	String sCompressorCLState = "UNK";
 
+	//Test Code
+	// Orginall yn
+	Spark danielsMouth = null; 
+
 	//Compressor motCompressor = null;
 	Solenoid solShifter = null;
 	Solenoid solTeainator = null;
@@ -86,6 +90,10 @@ public class RobotBase {
 		motRightDriveMotorA = new TalonFX(RobotMap.kCANId_LeftDriveMotorA);
 		motRightDriveMotorB = new TalonFX(RobotMap.kCANId_LeftDriveMotorB);
 
+		//Test Code
+		// Orginally named Daniel is a cool person
+		danielsMouth = new Spark(RobotMap.kPWMPort_EPCLifter);
+		
 		// Make sure motors are in break mode
 		motLeftDriveMotorA.setNeutralMode(NeutralMode.Brake);
 		motLeftDriveMotorB.setNeutralMode(NeutralMode.Brake);
@@ -99,6 +107,7 @@ public class RobotBase {
 		motRightDriveMotorB.set(ControlMode.PercentOutput, 0.0);
 
 		motLeftDriveMotorA.configSelectedFeedbackSensor(FeedbackDevice.IntegratedSensor);
+
 
 
 		motWinchLeftMotor = new CANSparkMax(RobotMap.kCANId_WinchLeftMotor,  CANSparkMaxLowLevel.MotorType.kBrushless );
@@ -240,6 +249,10 @@ public class RobotBase {
 		if( inputs.bSaveEncoderPosition ==  true){
 			applyPower.saveEncoderLocation(k_sBaseMotorEncoderKey, dEncoderPosition);
 		}
+
+
+		
+		danielsMouth.set(inputs.dDanielsMouthPower);
 
 		dEncoderDistance = applyPower.getEncoderDistance(k_sBaseMotorEncoderKey, dEncoderPosition);
 
